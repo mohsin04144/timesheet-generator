@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timesheet Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.flatpickr-calendar{background:#181c24!important;border:1px solid #252b3a!important;box-shadow:0 8px 32px rgba(0,0,0,.5)!important;border-radius:10px!important;font-family:'DM Mono',monospace!important;}
+.flatpickr-day{color:#b0b8cc!important;border-radius:6px!important;}
+.flatpickr-day:hover{background:#1e2330!important;border-color:#3ecf6a!important;color:#eef0f6!important;}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:#3ecf6a!important;border-color:#3ecf6a!important;color:#041208!important;font-weight:700!important;}
+.flatpickr-day.today{border-color:#3ecf6a!important;color:#3ecf6a!important;}
+.flatpickr-day.today.selected{color:#041208!important;}
+.flatpickr-day.flatpickr-disabled,.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay{color:#3a4055!important;}
+.flatpickr-months{background:#111318!important;border-radius:10px 10px 0 0!important;padding:6px 0!important;}
+.flatpickr-month{color:#eef0f6!important;}
+.flatpickr-current-month{color:#eef0f6!important;font-size:.9rem!important;}
+.flatpickr-current-month select,.flatpickr-current-month input{color:#eef0f6!important;background:#181c24!important;}
+.flatpickr-weekday{color:#3ecf6a!important;font-weight:600!important;}
+.flatpickr-prev-month svg,.flatpickr-next-month svg{fill:#3ecf6a!important;}
+.flatpickr-prev-month:hover svg,.flatpickr-next-month:hover svg{fill:#eef0f6!important;}
+.numInputWrapper:hover{background:#1e2330!important;}
+.numInput{color:#eef0f6!important;background:#111318!important;}
+:root {
+  --bg:#0a0c10;--sur:#111318;--sur2:#181c24;--sur3:#1e2330;
+  --bdr:#252b3a;--bdr2:#2e3650;
+  --acc:#3ecf6a;--acc2:#5de07e;--acc3:#2aab54;
+  --adim:rgba(62,207,106,0.10);--adim2:rgba(62,207,106,0.06);
+  --txt:#eef0f6;--txt2:#b0b8cc;--mut:#6a748a;--dim:#3a4055;
+  --red:#f05656;--red-dim:rgba(240,86,86,0.12);
+  --ylw:#f0a832;--ylw-dim:rgba(240,168,50,0.12);
+  --blu:#5b8af0;--r:12px;--r2:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;min-height:100vh;padding:40px 16px 80px;
+  background-image:radial-gradient(ellipse 800px 500px at 50% -100px,rgba(62,207,106,0.07) 0%,transparent 70%),
+  radial-gradient(ellipse 400px 300px at 90% 40%,rgba(91,138,240,0.04) 0%,transparent 60%);}
+.page{max-width:940px;margin:0 auto;}
+
+/* Header */
+.hdr{margin-bottom:36px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.hdr h1{font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-.04em;line-height:1;}
+.hdr h1 em{font-style:italic;color:var(--acc);font-family:'Instrument Serif',serif;}
+.hdr p{color:var(--mut);font-size:.8rem;margin-top:8px;font-family:'DM Mono',monospace;font-weight:300;}
+.badge{background:var(--adim);border:1px solid rgba(62,207,106,.25);color:var(--acc);font-family:'DM Mono',monospace;font-size:.65rem;padding:4px 10px;border-radius:20px;letter-spacing:.08em;}
+
+/* Steps */
+.steps{display:flex;margin-bottom:28px;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;}
+.step{flex:1;padding:10px 8px;text-align:center;font-size:.65rem;font-family:'DM Mono',monospace;color:var(--mut);background:var(--sur);border-right:1px solid var(--bdr);letter-spacing:.06em;text-transform:uppercase;transition:all .3s;}
+.step:last-child{border-right:none;}
+.step:hover{background:var(--adim2);color:var(--acc2);}
+.step.active{background:var(--adim);color:var(--acc);}
+.step.done{background:rgba(62,207,106,.05);color:var(--acc3);}
+.step-num{display:block;font-size:.9rem;font-weight:700;margin-bottom:2px;}
+
+/* Cards */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:24px 26px;margin-bottom:16px;position:relative;overflow:hidden;transition:border-color .2s;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc3),var(--acc),transparent);opacity:0;transition:opacity .3s;}
+.card:focus-within::before{opacity:1;}
+.card:focus-within{border-color:var(--bdr2);}
+.ct{font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:18px;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:10px;}
+.ct-icon{font-size:.9rem;}
+.ct::after{content:'';flex:1;height:1px;background:var(--bdr);}
+
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+@media(max-width:680px){.g2,.g3,.g4{grid-template-columns:1fr 1fr;}}
+@media(max-width:440px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:.67rem;font-weight:600;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.hint{color:var(--dim);font-size:.6rem;font-weight:400;}
+input,select{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);color:var(--txt);font-family:'DM Mono',monospace;font-size:.875rem;padding:10px 13px;outline:none;transition:border-color .2s,background .2s,box-shadow .2s;width:100%;}
+input:focus,select:focus{border-color:var(--acc3);background:var(--sur3);box-shadow:0 0 0 3px rgba(62,207,106,.08);}
+input:hover:not(:focus),select:hover:not(:focus){border-color:var(--bdr2);}
+input::placeholder{color:var(--dim);}
+select option{background:var(--sur2);color:var(--txt);}
+
+/* Toggle rows */
+.tog-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:14px;}
+.tog-row:hover{border-color:var(--bdr2);background:var(--sur3);}
+.tog-row.active{border-color:rgba(62,207,106,.3);background:var(--adim2);}
+.tog-lbl{font-size:.83rem;color:var(--txt2);font-weight:500;flex:1;}
+.tog-lbl small{display:block;font-size:.7rem;color:var(--mut);font-family:'DM Mono',monospace;margin-top:1px;}
+.tog{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.sli{position:absolute;inset:0;background:var(--sur3);border-radius:22px;border:1px solid var(--bdr2);transition:.25s;}
+.sli::before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--mut);border-radius:50%;transition:.25s;}
+.tog input:checked+.sli{background:rgba(62,207,106,.2);border-color:var(--acc);}
+.tog input:checked+.sli::before{transform:translateX(18px);background:var(--acc);}
+
+/* Dynamic rows */
+.dyn-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.dyn-row{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:10px 12px;display:grid;gap:8px;align-items:center;animation:slideIn .2s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.dyn-row input,.dyn-row select{background:var(--bg);border-color:var(--bdr);}
+.lv-row{grid-template-columns:170px 1fr 32px;}
+.ah-row{grid-template-columns:150px 1fr 1fr 80px auto;align-items:center;gap:8px;padding:10px 6px;border-bottom:1px solid var(--bdr);min-width:0;}
+.ah-row.editing{background:var(--sur3);border-radius:var(--r2);padding:10px 8px;border:1px solid var(--bdr2);margin-bottom:4px;border-bottom:none;}
+@media(max-width:680px){.lv-row,.ah-row{grid-template-columns:1fr 1fr;}}
+.btn-rm{background:none;border:1px solid transparent;color:var(--mut);font-size:.85rem;cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.6;transition:all .15s;line-height:1;}
+.btn-rm:hover{opacity:1;color:var(--red);border-color:var(--red-dim);background:var(--red-dim);}
+.btn-add{background:var(--adim);border:1px dashed rgba(62,207,106,.35);color:var(--acc);font-family:'DM Mono',monospace;font-size:.75rem;padding:8px 16px;border-radius:var(--r2);cursor:pointer;transition:all .15s;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
+.btn-add:hover{background:rgba(62,207,106,.18);border-color:var(--acc);}
+
+/* Pattern preview */
+.pat-info{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:14px 16px;}
+.pat-row-prev{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr);font-family:'DM Mono',monospace;font-size:.77rem;color:var(--txt2);}
+.pat-row-prev:last-child{border-bottom:none;padding-bottom:0;}
+.pat-row-prev:first-child{padding-top:0;}
+.pr-et{color:var(--txt);font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pr-det{flex:2;color:var(--txt2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pr-mins{flex:0 0 50px;text-align:right;color:var(--acc);font-weight:500;}
+.tag{font-size:.6rem;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:500;letter-spacing:.05em;flex-shrink:0;}
+.tfix{background:rgba(62,207,106,.12);color:var(--acc2);border:1px solid rgba(62,207,106,.25);}
+.tadj{background:rgba(240,168,50,.12);color:var(--ylw);border:1px solid rgba(240,168,50,.25);}
+.dd-wrap{display:flex;flex-direction:column;gap:4px;width:100%;}
+.dd-wrap select{width:100%;font-size:.76rem;padding:6px 9px;}
+.dd-other{display:none;width:100%;}
+.dd-other.show{display:block;}
+.no-team-msg{font-family:'DM Mono',monospace;font-size:.77rem;color:var(--dim);}
+.def-pat-row{display:grid;grid-template-columns:1fr 1fr 70px 100px 68px;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--bdr);font-family:'DM Mono',monospace;font-size:.78rem;}
+.def-pat-row:last-child{border-bottom:none;}
+.def-pat-row.editing{background:var(--sur3);border-radius:var(--r2);padding:10px 8px;border:1px solid var(--bdr2);}
+.def-pat-row .pr-val{color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.def-pat-row .pr-val.et{color:var(--txt);font-weight:500;}
+.def-pat-row input,.def-pat-row select{font-size:.76rem;padding:6px 9px;}
+.btn-edit{background:var(--adim);border:1px solid rgba(62,207,106,.3);color:var(--acc);font-size:.72rem;padding:5px 12px;border-radius:5px;cursor:pointer;font-family:'DM Mono',monospace;font-weight:600;letter-spacing:.04em;transition:all .15s;}
+.btn-edit:hover{background:rgba(62,207,106,.2);border-color:var(--acc);box-shadow:0 0 8px rgba(62,207,106,.15);}
+.btn-save{background:var(--adim);border:1px solid rgba(62,207,106,.35);color:var(--acc);font-size:.68rem;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s;}
+.btn-save:hover{background:rgba(62,207,106,.2);}
+.lv-chip{display:inline-flex;align-items:center;gap:5px;background:var(--sur3);border:1px solid var(--bdr2);
+  border-radius:20px;padding:4px 10px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--txt2);}
+.lv-chip .chip-date{color:var(--acc);font-weight:600;}
+.lv-chip .chip-rm{background:none;border:none;color:var(--mut);cursor:pointer;padding:0;font-size:.8rem;line-height:1;margin-left:2px;}
+.lv-chip .chip-rm:hover{color:var(--red);}
+.btn-del{background:none;border:1px solid transparent;color:var(--mut);font-size:.85rem;cursor:pointer;padding:4px 7px;border-radius:6px;opacity:.6;transition:all .15s;line-height:1;}
+.btn-del:hover{opacity:1;color:var(--red);border-color:var(--red-dim);background:var(--red-dim);}
+.def-pat-hdr{display:grid;grid-template-columns:1fr 1fr 70px 100px 68px;gap:8px;padding:0 6px 10px;font-size:.68rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px;}
+.pat-mins-warn{font-size:.72rem;font-family:'DM Mono',monospace;color:var(--red);margin-top:8px;display:none;}
+.pat-counter{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-family:'DM Mono',monospace;font-size:.8rem;}
+.pat-counter .pc-label{color:var(--txt2);font-weight:500;}
+.pat-counter .pc-used{color:var(--acc);font-weight:700;font-size:.85rem;}
+.pat-counter .pc-remaining{font-weight:700;font-size:.85rem;}
+.pat-counter .pc-remaining.ok{color:var(--acc3);}
+.pat-counter .pc-remaining.warn{color:#f0a832;}
+.pat-counter .pc-remaining.over{color:var(--red);}
+
+/* Custom pattern table */
+.pt-wrap{overflow-x:auto;}
+.pt-tbl{width:100%;border-collapse:collapse;font-size:.8rem;min-width:580px;}
+.pt-tbl th{text-align:left;font-size:.68rem;font-family:'DM Mono',monospace;letter-spacing:.1em;color:var(--txt2);text-transform:uppercase;padding:0 8px 10px;font-weight:600;}
+.pt-tbl td{padding:4px 6px;}
+.pt-tbl td input,.pt-tbl td select{font-size:.78rem;padding:7px 10px;}
+
+/* Error */
+.err{background:var(--red-dim);border:1px solid rgba(240,86,86,.3);border-radius:var(--r2);padding:12px 16px;font-size:.8rem;color:#ff9090;font-family:'DM Mono',monospace;margin-bottom:16px;display:none;animation:slideIn .2s ease;}
+
+/* Generate button */
+.gen-btn{width:100%;padding:17px;background:linear-gradient(135deg,var(--acc3),var(--acc));border:none;border-radius:var(--r);color:#041208;font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:all .2s;margin-top:6px;position:relative;overflow:hidden;}
+.gen-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.1));opacity:0;transition:opacity .2s;}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(62,207,106,.25);}
+.gen-btn:hover::after{opacity:1;}
+.gen-btn:active{transform:translateY(0);box-shadow:none;}
+
+/* Output */
+#out{display:none;margin-top:36px;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.out-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
+.out-hdr h2{font-size:1.2rem;font-weight:700;letter-spacing:-.02em;}
+.out-hdr h2 span{color:var(--acc);}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;}
+.dl-btn{background:linear-gradient(135deg,var(--acc3),var(--acc));border:none;border-radius:var(--r2);color:#041208;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82rem;padding:10px 22px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.dl-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(62,207,106,.3);}
+.dl-btn.sec{background:transparent;border:1px solid var(--bdr2);color:var(--txt2);}
+.dl-btn.sec:hover{border-color:var(--acc3);color:var(--acc);background:var(--adim);box-shadow:none;transform:none;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;}
+.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc3),var(--acc),transparent);}
+.stat .sv{font-size:1.7rem;font-weight:800;color:var(--acc);letter-spacing:-.03em;line-height:1;}
+.stat .sl{font-size:.66rem;font-family:'DM Mono',monospace;color:var(--mut);margin-top:5px;letter-spacing:.05em;text-transform:uppercase;}
+
+/* Breakdown */
+.breakdown{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+@media(max-width:540px){.breakdown{grid-template-columns:1fr;}}
+.bk-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;}
+.bk-title{font-size:.62rem;font-family:'DM Mono',monospace;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+.bk-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:.8rem;}
+.bk-row:last-child{border-bottom:none;padding-bottom:0;}
+.bk-label{color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;}
+.bk-val{font-family:'DM Mono',monospace;color:var(--txt);font-weight:500;flex-shrink:0;}
+.bk-bar{width:100%;height:4px;background:var(--sur3);border-radius:4px;margin-top:10px;overflow:hidden;}
+.bk-bar-fill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc));border-radius:4px;transition:width .8s ease;}
+
+/* Table */
+.tbl-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.tbl-hdr{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.tbl-hdr span{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--mut);}
+.tbl-search{background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-family:'DM Mono',monospace;font-size:.78rem;padding:6px 12px;outline:none;width:200px;transition:border-color .2s;}
+.tbl-search:focus{border-color:var(--acc3);}
+.tbl-wrap{overflow-x:auto;}
+table.prev{width:100%;border-collapse:collapse;font-size:.75rem;font-family:'DM Mono',monospace;min-width:1000px;}
+table.prev thead th{background:var(--sur2);color:var(--mut);font-weight:600;padding:10px 13px;text-align:left;white-space:nowrap;border-bottom:2px solid var(--acc3);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;}
+table.prev tbody tr{transition:background .1s;}
+table.prev tbody tr:nth-child(even){background:rgba(255,255,255,.015);}
+table.prev tbody tr:nth-child(odd){background:transparent;}
+table.prev tbody tr:hover{background:var(--adim);}
+table.prev tbody tr.is-leave{background:var(--ylw-dim)!important;}
+table.prev tbody tr.is-leave:hover{background:rgba(240,168,50,.18)!important;}
+table.prev td{padding:8px 13px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt2);}
+table.prev td:first-child,table.prev td:nth-child(4){color:var(--txt);}
+table.prev td.r{text-align:right;color:var(--acc);font-weight:500;}
+table.prev td.lc{color:var(--ylw);}
+.tbl-ftr{padding:12px 18px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--mut);}
+
+/* Warn */
+.warn-box{background:var(--ylw-dim);border:1px solid rgba(240,168,50,.25);border-radius:var(--r2);padding:12px 16px;font-size:.77rem;font-family:'DM Mono',monospace;color:var(--ylw);line-height:1.9;margin-bottom:16px;display:none;}
+
+/* Phases */
+.phase-row{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:12px 14px;display:grid;grid-template-columns:32px 1fr 1fr 1fr 32px;gap:10px;align-items:center;animation:slideIn .2s ease;}
+.phase-num{font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;color:var(--acc);text-align:center;}
+.phase-row input{background:var(--sur3);border-color:var(--bdr);}
+.phase-row input:focus{border-color:var(--acc3);}
+.phase-lbl{font-size:.63rem;font-family:'DM Mono',monospace;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
+.phase-snap-badge{font-size:.6rem;font-family:'DM Mono',monospace;color:var(--acc3);background:var(--adim);border:1px solid rgba(62,207,106,.2);border-radius:10px;padding:1px 7px;display:inline-block;margin-top:3px;}
+@media(max-width:600px){.phase-row{grid-template-columns:24px 1fr 1fr;}.phase-row .phase-label-field{grid-column:1/-1;}}
+
+/* Sep */
+.sep{height:1px;background:var(--bdr);margin:32px 0;position:relative;}
+.sep::before{content:'OUTPUT';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--bg);padding:0 12px;font-size:.6rem;font-family:'DM Mono',monospace;color:var(--dim);letter-spacing:.15em;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--sur);}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--acc3);}
+
+/* Guide Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{background:var(--sur);border:1px solid var(--bdr2);border-radius:var(--r);max-width:680px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.modal-hdr{padding:20px 24px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--sur);z-index:1;}
+.modal-hdr h2{font-size:1rem;font-weight:700;letter-spacing:-.01em;}
+.modal-hdr h2 span{color:var(--acc);}
+.modal-close{background:none;border:1px solid var(--bdr);color:var(--mut);font-size:1rem;width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:20px 24px 24px;}
+.guide-step{display:flex;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--bdr);}
+.guide-step:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.guide-num{width:28px;height:28px;border-radius:50%;background:var(--adim);border:1px solid rgba(62,207,106,.3);color:var(--acc);font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.guide-content h3{font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:5px;letter-spacing:.01em;}
+.guide-content p{font-size:.78rem;color:var(--txt2);line-height:1.65;font-family:'DM Mono',monospace;}
+.guide-content p strong{color:var(--acc);font-weight:600;}
+.guide-tip{background:var(--adim2);border:1px solid rgba(62,207,106,.15);border-radius:6px;padding:8px 12px;margin-top:8px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--mut);line-height:1.6;}
+.guide-tip b{color:var(--acc3);}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- Header -->
+<div class="hdr">
+  <div>
+    <h1>Time<em>sheet</em> Generator</h1>
+    <p>// fill in details &rarr; generate &rarr; download real .xlsx instantly &mdash; no server needed</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <button onclick="openGuide()" style="background:transparent;border:1px solid var(--bdr2);color:var(--txt2);font-family:'DM Mono',monospace;font-size:.72rem;padding:7px 14px;border-radius:20px;cursor:pointer;transition:all .2s;letter-spacing:.04em;" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--bdr2)';this.style.color='var(--txt2)'">? How to Use</button>
+    <span class="badge">v2.1 &middot; SMT &middot; Browser-only</span>
+  </div>
+</div>
+
+<!-- Steps -->
+<div class="steps">
+  <div class="step active" id="s1" onclick="scrollToCard('card-basic')" style="cursor:pointer"><span class="step-num">01</span>Basic Info</div>
+  <div class="step" id="s2" onclick="scrollToCard('card-patterns')" style="cursor:pointer"><span class="step-num">02</span>Patterns</div>
+  <div class="step" id="s3" onclick="scrollToCard('card-leave')" style="cursor:pointer"><span class="step-num">03</span>Leave Days</div>
+  <div class="step" id="s4" onclick="scrollToCard('card-adhoc')" style="cursor:pointer"><span class="step-num">04</span>Adhoc</div>
+  <div class="step" id="s5" onclick="scrollToCard('card-generate')" style="cursor:pointer"><span class="step-num">05</span>Generate</div>
+</div>
+
+<div id="err-box" class="err"></div>
+
+<!-- 01 BASIC INFO -->
+<div class="card" id="card-basic">
+  <div class="ct"><span class="ct-icon"></span>Basic Info</div>
+
+  <!-- Row 1: Full Name + Project Team + Month in equal columns -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="field">
+      <label>Full Name <span class="hint">— your full display name</span></label>
+      <input id="f-name" type="text" placeholder="e.g. Shaik Mohsin" oninput="updateSteps()">
+    </div>
+    <div class="field">
+      <label>Project Team <span class="hint">— your assigned team</span></label>
+      <select id="f-team" onchange="onTeamChange();updateSteps()">
+        <option value="">&#8212; Select &#8212;</option>
+        <option value="SMT-Quality Management">SMT-Quality Management</option>
+        <option value="SMT-ITSMRemedy">SMT-ITSMRemedy</option>
+        <option value="SMT-TMS">SMT-TMS</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Activity / Efforts <span class="hint">— skip if using phases</span></label>
+      <input id="f-release" type="text" placeholder="e.g. ServiceNow Release 25.1" oninput="onReleaseInput()">
+      <div id="f-release-phase-note" style="display:none;margin-top:6px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--acc);font-weight:600;letter-spacing:.04em;padding:5px 10px;background:var(--adim);border:1px solid rgba(62,207,106,.25);border-radius:6px;">
+        &#x2713; Handled by Work Phases below
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom team name (shown only when Other selected) -->
+  <div id="other-team-row" style="display:none;margin-bottom:16px;">
+    <div class="field" style="max-width:340px;">
+      <label>Custom Project Team Name</label>
+      <input id="f-team-other" type="text" placeholder="e.g. SMT-Custom" oninput="updateSteps()">
+    </div>
+  </div>
+
+  <!-- Row 2: Month + Year in equal columns -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="field">
+      <label>Month <span class="hint">— timesheet month</span></label>
+      <select id="f-month" onchange="onMonthYearChange()">
+        <option value="">&#8212; Select Month &#8212;</option>
+        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Year</label>
+      <div class="dd-wrap" id="year-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WORK PHASES -->
+<div class="card" id="card-phases">
+  <div class="ct">Work Phases</div>
+  <div class="tog-row" id="tr-phases" onclick="togClick('tog-phases','phases-sec','tr-phases');onPhasesToggle()">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-phases" onchange="togChange('phases-sec','tr-phases',this.checked);onPhasesToggle()">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I worked on multiple releases / activities this month
+      <small>Split the month into date ranges, each with its own release label</small>
+    </div>
+  </div>
+  <div id="phases-sec" style="display:none;margin-top:4px;">
+    <div style="font-size:.68rem;font-family:'DM Mono',monospace;color:var(--mut);margin-bottom:12px;line-height:1.6;">
+      Define date ranges for each phase. End of one phase auto-snaps to the start of the next.<br>
+      Leave the <strong style="color:var(--txt2)">Activity / Efforts</strong> field above blank — each phase has its own label.
+    </div>
+    <div id="phases-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+    <button class="btn-add" onclick="addPhase()" id="btn-add-phase">＋ Add Phase</button>
+    <div id="phases-warn" style="display:none;margin-top:10px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--red);"></div>
+  </div>
+</div>
+
+<!-- 02 PATTERNS -->
+<div class="card" id="card-patterns">
+  <div class="ct"><span class="ct-icon"></span>Daily Patterns</div>
+  <div class="tog-row" id="tr-cust" onclick="togClick('tog-cust','cust-sec','tr-cust');custChange()">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-cust" onchange="togChange('cust-sec','tr-cust',this.checked);custChange()">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">Use custom patterns
+      <small>Override team defaults with your own pattern rows</small>
+    </div>
+  </div>
+  <div id="def-pat" class="pat-info">
+    <p class="no-team-msg">&#8592; Select a Project Team in Basic Info to preview default patterns.</p>
+  </div>
+  <div id="cust-sec" style="display:none;margin-top:4px">
+    <div class="pt-wrap">
+      <table class="pt-tbl">
+        <thead><tr>
+          <th>Effort Type</th>
+          <th>Effort Details</th>
+          <th style="width:80px">Mins</th>
+          <th style="width:120px">Type</th>
+          <th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="pt-body"></tbody>
+      </table>
+    </div>
+    <button class="btn-add" onclick="addPat()" style="margin-top:10px">＋ Add Pattern Row</button>
+  </div>
+</div>
+
+<!-- 03 LEAVE DAYS -->
+<div class="card" id="card-leave">
+  <div class="ct"><span class="ct-icon"></span>Leave Days</div>
+  <div class="tog-row" id="tr-leave" onclick="togClick('tog-leave','lv-sec','tr-leave')">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-leave" onchange="togChange('lv-sec','tr-leave',this.checked)">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I have leave days this month
+      <small>Sick Leave · Planned Leave · Comp Off · Holiday</small>
+    </div>
+  </div>
+  <div id="lv-sec" style="display:none">
+    <!-- Add Leave Row -->
+    <div id="lv-add-row" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:14px;padding:14px 16px;background:var(--sur2);border:1px dashed rgba(62,207,106,.3);border-radius:var(--r2);">
+      <div>
+        <div style="font-size:.63rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Date</div>
+        <input type="text" id="lv-cal-input" placeholder="Pick one or more dates" readonly style="cursor:pointer;width:200px;">
+      </div>
+      <div>
+        <div style="font-size:.63rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Leave Type</div>
+        <select id="lv-type" style="width:160px;">
+          <option>Sick Leave</option>
+          <option>Planned Leave</option>
+          <option>Comp Off</option>
+          <option>Holiday</option>
+        </select>
+      </div>
+      <button class="btn-add" onclick="addLvEntry()" style="margin-bottom:1px;">＋ Add Leave</button>
+    </div>
+
+    <!-- Grouped leave sections -->
+    <div id="lv-groups" style="margin-top:16px;display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="lv-count" style="font-size:.75rem;font-family:'DM Mono',monospace;color:var(--txt2);margin-top:10px;padding:8px 12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);display:none;"></div>
+  </div>
+</div>
+
+<!-- 04 ADHOC -->
+<div class="card" id="card-adhoc">
+  <div class="ct"><span class="ct-icon"></span>Adhoc Efforts</div>
+  <div class="tog-row" id="tr-adhoc" onclick="togClick('tog-adhoc','ah-sec','tr-adhoc')">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-adhoc" onchange="togChange('ah-sec','tr-adhoc',this.checked)">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I have adhoc effort entries for specific days
+      <small>Extra work on specific dates, on top of daily patterns</small>
+    </div>
+  </div>
+  <div id="ah-sec" style="display:none">
+    <div style="display:grid;grid-template-columns:150px 1fr 1fr 80px auto;gap:8px;padding:0 6px 10px;font-size:.68rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px;">
+      <span>Date</span><span>Effort Type</span><span>Effort Details</span><span>Mins</span><span></span>
+    </div>
+    <div class="dyn-list" id="ah-list"></div>
+    <button class="btn-add" onclick="addAdhoc()">＋ Add Adhoc Entry</button>
+  </div>
+</div>
+
+<button class="gen-btn" id="card-generate" onclick="generate()">Generate Timesheet</button>
+
+<!-- OUTPUT -->
+<div id="out">
+  <div class="sep"></div>
+  <div class="out-hdr">
+    <h2>Generated <span>Timesheet</span></h2>
+    <div class="btn-group">
+      <button class="dl-btn sec" onclick="copyMD()">Copy Summary</button>
+      <button class="dl-btn" id="dl-btn" onclick="downloadXLSX()">Download .xlsx</button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="tbl-card">
+    <div class="tbl-hdr">
+      <span id="tbl-count">0 rows</span>
+      <input class="tbl-search" placeholder="Filter rows..." oninput="filterTbl(this.value)">
+    </div>
+    <div class="tbl-wrap">
+      <table class="prev">
+        <thead><tr>
+          <th>LOB Vertical</th><th>Project Team</th><th>Effort Type</th>
+          <th>Associate Name</th><th>Date</th><th>Effort Details</th>
+          <th class="r">Time Spent (Mins)</th><th>Ticket Type</th><th>Ticket #</th>
+          <th>SLA Met</th><th>Job Accuracy</th><th>Comments</th>
+        </tr></thead>
+        <tbody id="prev-body"></tbody>
+      </table>
+    </div>
+    <div class="tbl-ftr">
+      <span id="tbl-showing"></span>
+      <span id="tbl-tot"></span>
+    </div>
+  </div>
+  <div id="warn-notes" class="warn-box"></div>
+</div>
+
+
+<!-- How to Use Modal -->
+<div class="modal-overlay" id="guide-modal" onclick="if(event.target===this)closeGuide()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>How to Use — <span>Timesheet Generator</span></h2>
+      <button class="modal-close" onclick="closeGuide()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div class="guide-content">
+          <h3>Fill in Basic Info</h3>
+          <p>Enter your <strong>Full Name</strong>, select your <strong>Project Team</strong>, and pick the <strong>Month &amp; Year</strong> for the timesheet.<br>
+          In <strong>Activity / Efforts</strong>, type the release or project you worked on (e.g. <em>ServiceNow Release 25.1</em>). Skip this if you use Work Phases.</p>
+          <div class="guide-tip"><b>Tip:</b> Changing the month clears all leave and adhoc entries — set month first before adding other details.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div class="guide-content">
+          <h3>Work Phases (Optional)</h3>
+          <p>Toggle on if you worked on <strong>multiple releases</strong> within the month (e.g. Release 25.1 for the first half, 25.2 for the second half).<br>
+          Set a <strong>From</strong> and <strong>To</strong> date for each phase and give it a label. The <strong>To</strong> date of one phase auto-snaps the <strong>From</strong> of the next.</p>
+          <div class="guide-tip"><b>Tip:</b> Leave the Activity / Efforts field blank when using phases — each phase has its own label.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div class="guide-content">
+          <h3>Daily Patterns</h3>
+          <p>Your team's default pattern is pre-loaded (fixed meetings + adjustable main task). Each working day is filled using this pattern — <strong>480 mins total</strong> per day.<br>
+          Toggle <strong>Use custom patterns</strong> to override with your own rows. One row must be marked <strong>ADJ</strong> (adjustable) — it fills the remaining time.</p>
+          <div class="guide-tip"><b>Tip:</b> Fixed rows run every day as-is. The ADJ row absorbs whatever time is left after fixed rows.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">4</div>
+        <div class="guide-content">
+          <h3>Leave Days (Optional)</h3>
+          <p>Toggle on if you took any leave. Pick <strong>one or more dates</strong> from the calendar, choose the <strong>Leave Type</strong> (Sick / Planned / Comp Off / Holiday), then click <strong>Add Leave</strong>.<br>
+          Repeat for different leave types. Leave days show as <em>Other - Time Off</em> rows in the final sheet.</p>
+          <div class="guide-tip"><b>Tip:</b> Weekends are disabled. You cannot add adhoc work on a leave day.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div class="guide-content">
+          <h3>Adhoc Efforts (Optional)</h3>
+          <p>Toggle on to log <strong>extra work on specific days</strong> — such as a training session or a special call — on top of your daily pattern.<br>
+          Each entry needs a date, effort type, effort details, and duration in minutes.</p>
+          <div class="guide-tip"><b>Tip:</b> Adhoc minutes are added first; the ADJ pattern row fills the remainder. Total per day cannot exceed 480 mins.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-num">6</div>
+        <div class="guide-content">
+          <h3>Generate &amp; Download</h3>
+          <p>Click <strong>Generate Timesheet</strong> to preview all rows. Review the breakdown, then click <strong>Download .xlsx</strong> to save the file — ready to submit.<br>
+          Use <strong>Copy Summary</strong> to copy a markdown summary to your clipboard for sharing in chat or docs.</p>
+          <div class="guide-tip"><b>Tip:</b> The file is generated entirely in your browser — nothing is sent to any server.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+const MONTHS=["","January","February","March","April","May","June","July","August","September","October","November","December"];
+let lvId=0,ahId=0,ptId=0,genRows=[],genMeta={};
+
+/* ── Scroll to card ── */
+function scrollToCard(id){
+  const el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── Highlight active step on scroll ── */
+function getCardStepMap(){
+  return [
+    {id:'card-basic',   step:'s1'},
+    {id:'card-patterns',step:'s2'},
+    {id:'card-leave',   step:'s3'},
+    {id:'card-adhoc',   step:'s4'},
+    {id:'card-generate',step:'s5'},
+  ];
+}
+function highlightActiveStep(){
+  const map=getCardStepMap();
+  let active='s1';
+  for(const {id,step} of map){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    const rect=el.getBoundingClientRect();
+    if(rect.top<=160) active=step;
+  }
+  map.forEach(({step})=>{
+    const s=document.getElementById(step);
+    if(!s) return;
+    if(s.classList.contains('done')) return;
+    s.classList.toggle('active', step===active);
+  });
+}
+window.addEventListener('scroll', highlightActiveStep, {passive:true});
+
+/* ── Year dropdown init ── */
+(function(){
+  const curYear=new Date().getFullYear();
+  const wrap=document.getElementById('year-wrap');
+  if(!wrap) return;
+  let selOpts='';
+  for(let y=curYear;y<=curYear+5;y++){
+    selOpts+=`<option value="${y}"${y===curYear?' selected':''}>${y}</option>`;
+  }
+  wrap.innerHTML=`
+    <select id="f-year-sel" onchange="onYearDDO(this.value)">
+      <option value="">-- Year --</option>
+      ${selOpts}
+      <option value="__other__">Other -- type manually</option>
+    </select>
+    <input type="number" id="f-year" class="dd-other" placeholder="e.g. 2026" min="2020" max="2099"
+      oninput="onMonthYearChange()" value="${curYear}">`;
+  // set default value
+  document.getElementById('f-year').value=curYear;
+  // trigger sel to match
+  document.getElementById('f-year-sel').value=curYear;
+})();
+
+function onYearDDO(val){
+  const inp=document.getElementById('f-year');
+  const sel=document.getElementById('f-year-sel');
+  if(val==='__other__'){
+    inp.classList.add('show');
+    inp.value='';
+    inp.focus();
+  } else {
+    inp.classList.remove('show');
+    inp.value=val;
+  }
+  onMonthYearChange();
+}
+
+/* ── Steps ── */
+function updateSteps(){
+  const tv=document.getElementById('f-team').value;
+  const teamOk=tv&&(tv!=='Other'||document.getElementById('f-team-other').value.trim());
+  const ok=document.getElementById('f-name').value.trim()&&teamOk;
+  const full=ok&&document.getElementById('f-month').value&&document.getElementById('f-year').value;
+  document.getElementById('s1').className='step '+(ok?'done':'active');
+  document.getElementById('s5').className='step '+(full?'active':'');
+}
+
+/* ── Toggle ── */
+function togClick(chkId,secId,rowId){
+  const c=document.getElementById(chkId);c.checked=!c.checked;togChange(secId,rowId,c.checked);
+}
+function togChange(secId,rowId,on){
+  document.getElementById(secId).style.display=on?'block':'none';
+  document.getElementById(rowId).classList.toggle('active',on);
+  if(secId==='lv-sec'&&on) setTimeout(initLvCal,50);
+}
+
+/* ── Save Adhoc row ── */
+function renderAdhocView(id,ds,et,det,mn){
+  const d=document.getElementById('ah-'+id);
+  d.classList.remove('editing');
+  d.dataset.ds=ds;d.dataset.et=et;d.dataset.det=det;d.dataset.mn=mn;
+  const cellStyle='font-family:DM Mono,monospace;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+  const c=document.createElement('span');c.style=cellStyle+'color:var(--txt2)';c.textContent=ds;
+  const e=document.createElement('span');e.style=cellStyle+'color:var(--txt);font-weight:500';e.title=et;e.textContent=et;
+  const t=document.createElement('span');t.style=cellStyle+'color:var(--txt2)';t.title=det;t.textContent=det;
+  const m=document.createElement('span');m.style=cellStyle+'color:var(--acc);font-weight:700';m.textContent=mn+'m';
+  const editBtn=document.createElement('button');editBtn.className='btn-edit';editBtn.textContent='Edit';editBtn.title='Edit';editBtn.onclick=()=>editAdhoc(id);
+  const delBtn=document.createElement('button');delBtn.className='btn-del';delBtn.title='Delete';delBtn.innerHTML='✕';delBtn.onclick=()=>d.remove();
+  const btns=document.createElement('div');btns.style='display:flex;gap:4px';btns.appendChild(editBtn);btns.appendChild(delBtn);
+  d.innerHTML='';d.appendChild(c);d.appendChild(e);d.appendChild(t);d.appendChild(m);d.appendChild(btns);
+}
+
+function saveAdhoc(id){
+  const ds=document.getElementById('ahd-'+id).value;
+  const et=getDDOVal('ahe-sel-'+id,'ahe-'+id);
+  const det=getDDOVal('ahdet-sel-'+id,'ahdet-'+id);
+  const mn=parseInt(getDDOVal('ahm-sel-'+id,'ahm-'+id));
+  if(!ds){alert('Please pick a date.');return;}
+  if(lvSelectedDates[ds]){
+    alert('\u26a0\ufe0f '+ds+' is marked as '+lvSelectedDates[ds]+'. You cannot log adhoc work on a leave day.');return;
+  }
+  if(!et){alert('Please select or enter an Effort Type.');return;}
+  if(!det){alert('Please select or enter Effort Details.');return;}
+  if(!mn||mn<1||mn>480){alert('Please select or enter valid Mins (1-480).');return;}
+  renderAdhocView(id,ds,et,det,mn);
+}
+
+function editAdhoc(id){
+  const d=document.getElementById('ah-'+id);
+  const ds=d.dataset.ds||'';
+  const et=d.dataset.et||'';
+  const det=d.dataset.det||'';
+  const mn=d.dataset.mn||'';
+  d.classList.add('editing');
+  d.innerHTML=makeDDO('ahe-sel-'+id,'ahe-'+id,ET_OPTS,et,'Effort Type');
+  const dateInp=document.createElement('input');dateInp.type='text';dateInp.id='ahd-'+id;dateInp.value=ds;dateInp.placeholder='Pick a date';dateInp.readOnly=true;dateInp.style.cursor='pointer';
+  d.insertBefore(dateInp,d.firstChild);
+  d.innerHTML=`<input type="text" id="ahd-${id}" value="${ds}" placeholder="Pick a date" readonly style="cursor:pointer">${makeDDO('ahe-sel-'+id,'ahe-'+id,ET_OPTS,et,'Effort Type')}${makeDDO('ahdet-sel-'+id,'ahdet-'+id,DET_OPTS,det,'Effort Details')}${makeAdhocMinsDDO('ahm-sel-'+id,'ahm-'+id,mn)}`;
+  const saveBtn=document.createElement('button');saveBtn.className='btn-save';saveBtn.textContent='Save';saveBtn.onclick=()=>saveAdhoc(id);
+  const cancelBtn=document.createElement('button');cancelBtn.className='btn-rm';cancelBtn.textContent='X';cancelBtn.onclick=()=>editAdhocCancel(id);
+  const btns=document.createElement('div');btns.style='display:flex;gap:4px;padding-top:2px';btns.appendChild(saveBtn);btns.appendChild(cancelBtn);
+  d.appendChild(btns);
+  const editAhCalCfg=Object.assign({dateFormat:'Y-m-d',disableMobile:true,allowInput:false,defaultDate:ds||undefined},getCalConfig());
+  editAhCalCfg.disable=(editAhCalCfg.disable||[]).concat([function(date){
+    const k=flatpickr.formatDate(date,'Y-m-d');
+    return !!lvSelectedDates[k];
+  }]);
+  flatpickr('#ahd-'+id,editAhCalCfg);
+}
+
+function editAdhocCancel(id){
+  const d=document.getElementById('ah-'+id);
+  if(!d.dataset.ds){d.remove();return;}
+  renderAdhocView(id,d.dataset.ds,d.dataset.et,d.dataset.det,d.dataset.mn);
+}
+
+/* ── Month/Year change ── */
+function onMonthYearChange(){
+  const ahList=document.getElementById('ah-list');
+  const hadLeave=Object.keys(lvSelectedDates).length>0;
+  const hadAdhoc=ahList&&ahList.children.length>0;
+  /* Reset leave state */
+  lvSelectedDates={};
+  if(lvFp){lvFp.destroy();lvFp=null;}
+  const lvGroups=document.getElementById('lv-groups');
+  if(lvGroups)lvGroups.innerHTML='';
+  const lvCount=document.getElementById('lv-count');
+  if(lvCount)lvCount.textContent='';
+  const lvCalInput=document.getElementById('lv-cal-input');
+  if(lvCalInput)lvCalInput.value='';
+  /* Reset adhoc */
+  if(ahList)ahList.innerHTML='';
+  /* Reset phases dates */
+  const phasesList=document.getElementById('phases-list');
+  if(phasesList)phasesList.innerHTML='';
+  phaseId=0;
+  if(document.getElementById('tog-phases')?.checked){
+    addPhase();addPhase();
+  }
+
+
+  if(hadLeave||hadAdhoc) showToast('Month changed - leave & adhoc dates cleared.');
+  updateSteps();
+}
+
+/* ── Toast ── */
+function showToast(msg){
+  let t=document.getElementById('toast-msg');
+  if(!t){
+    t=document.createElement('div');
+    t.id='toast-msg';
+    t.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e2330;border:1px solid rgba(240,168,50,.4);color:#f0a832;font-family:DM Mono,monospace;font-size:.78rem;padding:10px 22px;border-radius:8px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';
+  t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},3000);
+}
+
+/* ── Calendar month restriction ── */
+function getCalConfig(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  if(mon&&yr){
+    const y=parseInt(yr),m=parseInt(mon)-1;
+    const firstDay=new Date(y,m,1);
+    const lastDay=new Date(y,m+1,0);
+    const lockNav=function(selectedDates,dateStr,fp){
+      if(fp.currentMonth!==m||fp.currentYear!==y){
+        fp.jumpToDate(firstDay,false);
+      }
+    };
+    return {
+      defaultDate:firstDay,
+      minDate:firstDay,
+      maxDate:lastDay,
+      onMonthChange:lockNav,
+      onYearChange:lockNav,
+    };
+  }
+  return {};
+}
+
+/* ── Leave ── */
+let lvSelectedDates={};/* key=YYYY-MM-DD, val=leaveType */
+let lvFp=null;
+
+const LV_TYPE_META={
+  'Sick Leave':    {color:'#f05656',dim:'rgba(240,86,86,0.10)',border:'rgba(240,86,86,0.3)',icon:''},
+  'Planned Leave': {color:'#5b8af0',dim:'rgba(91,138,240,0.10)',border:'rgba(91,138,240,0.3)',icon:''},
+  'Comp Off':      {color:'#f0a832',dim:'rgba(240,168,50,0.10)',border:'rgba(240,168,50,0.3)',icon:''},
+  'Holiday':       {color:'#3ecf6a',dim:'rgba(62,207,106,0.10)',border:'rgba(62,207,106,0.3)',icon:''},
+};
+
+function initLvCal(){
+  if(lvFp) lvFp.destroy();
+  const cal=getCalConfig();
+  lvFp=flatpickr('#lv-cal-input',Object.assign({},cal,{
+    mode:'multiple',
+    dateFormat:'Y-m-d',
+    disableMobile:true,
+    allowInput:false,
+    disable:[function(date){return date.getDay()===0||date.getDay()===6;}],
+  }));
+}
+
+function addLvEntry(){
+  const fp=lvFp;
+  if(!fp||!fp.selectedDates.length){showToast('Please pick at least one date first.');return;}
+  const tp=document.getElementById('lv-type').value;
+  let added=0,skipped=0;
+  fp.selectedDates.forEach(function(d){
+    const ds=flatpickr.formatDate(d,'Y-m-d');
+    if(lvSelectedDates[ds]){skipped++;return;}
+    lvSelectedDates[ds]=tp;
+    added++;
+  });
+  fp.clear();
+  renderLvGroups();
+  if(skipped>0&&added===0) showToast(skipped+' date(s) already added.');
+  else if(skipped>0) showToast('Added '+added+' date(s). '+skipped+' duplicate(s) skipped.');
+}
+
+function removeLvDate(ds){
+  delete lvSelectedDates[ds];
+  renderLvGroups();
+}
+
+function renderLvGroups(){
+  const container=document.getElementById('lv-groups');
+  const count=document.getElementById('lv-count');
+  container.innerHTML='';
+  const byType={};
+  Object.keys(lvSelectedDates).sort().forEach(ds=>{
+    const tp=lvSelectedDates[ds];
+    if(!byType[tp])byType[tp]=[];
+    byType[tp].push(ds);
+  });
+  const typeOrder=['Sick Leave','Planned Leave','Comp Off','Holiday'];
+  const usedTypes=typeOrder.filter(t=>byType[t]);
+  if(!usedTypes.length){count.textContent='';return;}
+  usedTypes.forEach(tp=>{
+    const meta=LV_TYPE_META[tp]||{color:'var(--acc)',dim:'var(--adim)',border:'var(--bdr2)',icon:''};
+    const dates=byType[tp];
+    const grp=document.createElement('div');
+    grp.style.cssText=`background:${meta.dim};border:1px solid ${meta.border};border-radius:var(--r2);padding:10px 14px;`;
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;`;
+    hdr.innerHTML=`<span style="display:flex;align-items:center;gap:8px;font-size:.68rem;font-family:'DM Mono',monospace;font-weight:700;color:${meta.color};letter-spacing:.1em;text-transform:uppercase;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${meta.color};flex-shrink:0;"></span>${tp} <span style="font-weight:400;opacity:.6;">(${dates.length} day${dates.length>1?'s':''})</span></span>`;
+    grp.appendChild(hdr);
+    const chips=document.createElement('div');
+    chips.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+    dates.forEach(ds=>{
+      const chip=document.createElement('div');
+      chip.className='lv-chip';
+      chip.style.cssText=`border-color:${meta.border};background:rgba(0,0,0,0.2);`;
+      chip.innerHTML=`<span class="chip-date" style="color:${meta.color};">${ds}</span><button class="chip-rm" onclick="removeLvDate('${ds}')" title="Remove">×</button>`;
+      chips.appendChild(chip);
+    });
+    grp.appendChild(chips);
+    container.appendChild(grp);
+  });
+  const total=Object.keys(lvSelectedDates).length;
+  if(total){
+    count.style.display='block';
+    const typeBreakdown=usedTypes.map(t=>{
+      const meta=LV_TYPE_META[t];
+      return `<span style="color:${meta.color};font-weight:600;">${byType[t].length}</span> ${t}`;
+    }).join('<span style="color:var(--dim);"> &nbsp;·&nbsp; </span>');
+    count.innerHTML=`<span style="color:var(--mut);font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:.65rem;">Total Leave &nbsp;</span><span style="color:var(--acc);font-weight:700;font-size:.85rem;">${total} day${total>1?'s':''}</span><span style="color:var(--dim)"> &nbsp;—&nbsp; </span>${typeBreakdown}`;
+  } else {
+    count.style.display='none';
+    count.innerHTML='';
+  }
+}
+
+function renderLvChips(){renderLvGroups();}/* backward compat */
+
+function addLeave(){
+  // legacy stub - no longer used
+}
+
+/* ── Adhoc ── */
+function addAdhoc(){
+  const id=++ahId,d=document.createElement('div');
+  d.className='dyn-row ah-row';d.id='ah-'+id;
+  d.classList.add('editing');
+  d.innerHTML=`<input type="text" id="ahd-${id}" placeholder="Pick a date" readonly style="cursor:pointer">${makeDDO('ahe-sel-'+id,'ahe-'+id,ET_OPTS,'','Effort Type')}${makeDDO('ahdet-sel-'+id,'ahdet-'+id,DET_OPTS,'','Effort Details')}${makeAdhocMinsDDO('ahm-sel-'+id,'ahm-'+id,'')}<div style="display:flex;gap:4px;padding-top:2px"><button class="btn-save" onclick="saveAdhoc(${id})" title="Save">Save</button><button class="btn-rm" onclick="document.getElementById('ah-${id}').remove()" title="Cancel">×</button></div>`;
+  document.getElementById('ah-list').appendChild(d);
+  const ahCalCfg=Object.assign({dateFormat:'Y-m-d',disableMobile:true,allowInput:false},getCalConfig());
+  ahCalCfg.disable=(ahCalCfg.disable||[]).concat([function(date){
+    const ds=flatpickr.formatDate(date,'Y-m-d');
+    return !!lvSelectedDates[ds];
+  }]);
+  flatpickr('#ahd-'+id,ahCalCfg);
+  document.getElementById('ahd-'+id).click();
+}
+
+/* ── Custom Patterns ── */
+function custChange(){
+  const on=document.getElementById('tog-cust').checked;
+  document.getElementById('def-pat').style.display=on?'none':'block';
+  if(on&&!document.getElementById('pt-body').children.length)addPat();
+}
+function renderPatView(id,et,det,mn,adj){
+  const tr=document.getElementById('pt-'+id);
+  tr.dataset.et=et;tr.dataset.det=det;tr.dataset.mn=mn;tr.dataset.adj=adj;
+  const adjLabel=adj==='adj'?'ADJ':'FIXED';
+  const adjClass=adj==='adj'?'tadj':'tfix';
+  tr.innerHTML=`<td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--txt);font-weight:500">${esc(et)}</td><td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--txt2)">${esc(det)}</td><td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--acc);font-weight:700">${mn}m</td><td><span class="tag ${adjClass}">${adjLabel}</span></td><td><div style="display:flex;gap:4px"><button class="btn-edit" onclick="editPat(${id})">Edit</button><button class="btn-del" title="Delete" onclick="document.getElementById('pt-${id}').remove()">✕</button></div></td>`;
+}
+
+function savePat(id){
+  const et=getDDOVal('pte-sel-'+id,'pte-'+id);
+  const det=getDDOVal('ptd-sel-'+id,'ptd-'+id);
+  const mn=getDDOVal('ptm-sel-'+id,'ptm-'+id);
+  const adj=document.getElementById('pta-'+id).value;
+  if(!et){alert('Please select or enter an Effort Type.');return;}
+  if(!det){alert('Please select or enter Effort Details.');return;}
+  if(!mn||parseInt(mn)<1){alert('Please select or enter valid Mins.');return;}
+  renderPatView(id,et,det,mn,adj);
+}
+
+function editPat(id){
+  const tr=document.getElementById('pt-'+id);
+  const et=tr.dataset.et||'';
+  const det=tr.dataset.det||'';
+  const mn=tr.dataset.mn||'';
+  const adj=tr.dataset.adj||'adj';
+  tr.innerHTML=`<td>${makeDDO('pte-sel-'+id,'pte-'+id,ET_OPTS,et,'e.g. Project - Meetings')}</td><td>${makeDDO('ptd-sel-'+id,'ptd-'+id,DET_OPTS,det,'Effort Details')}</td><td>${makeMinsDDO('ptm-sel-'+id,'ptm-'+id,mn)}</td><td><select id="pta-${id}"><option value="fixed"${adj==='fixed'?' selected':''}>Fixed</option><option value="adj"${adj==='adj'?' selected':''}>Adjustable</option></select></td><td><div style="display:flex;gap:4px"><button class="btn-save" onclick="savePat(${id})">Save</button><button class="btn-rm" onclick="editPatCancel(${id})">X</button></div></td>`;
+}
+
+function editPatCancel(id){
+  const tr=document.getElementById('pt-'+id);
+  if(!tr.dataset.et){tr.remove();return;}
+  renderPatView(id,tr.dataset.et,tr.dataset.det,tr.dataset.mn,tr.dataset.adj);
+}
+
+function addPat(){
+  const id=++ptId,tr=document.createElement('tr');tr.id='pt-'+id;
+  tr.innerHTML=`<td>${makeDDO('pte-sel-'+id,'pte-'+id,ET_OPTS,'','e.g. Project - Meetings')}</td><td>${makeDDO('ptd-sel-'+id,'ptd-'+id,DET_OPTS,'','Effort Details')}</td><td>${makeMinsDDO('ptm-sel-'+id,'ptm-'+id,'')}</td><td><select id="pta-${id}"><option value="fixed">Fixed</option><option value="adj" selected>Adjustable</option></select></td><td><div style="display:flex;gap:4px"><button class="btn-save" onclick="savePat(${id})">Save</button><button class="btn-rm" onclick="document.getElementById('pt-${id}').remove()">X</button></div></td>`;
+  document.getElementById('pt-body').appendChild(tr);
+}
+
+/* ── Pattern Preview ── */
+function getRel(){const v=document.getElementById('f-release').value.trim();return(!v||v.toUpperCase()==='NONE')?'General Activities':v;}
+function onTeamChange(){
+  const v=document.getElementById('f-team').value;
+  const otherRow=document.getElementById('other-team-row');
+  otherRow.style.display=v==='Other'?'block':'none';
+  if(v==='Other'&&!document.getElementById('tog-cust').checked){
+    document.getElementById('tog-cust').checked=true;
+    togChange('cust-sec','tr-cust',true);
+  }
+  updatePatPrev();
+}
+
+/* ── Dropdown + Other helpers ── */
+const ET_OPTS=["Project - Dev - Releases","Project - Dev - Testing","Project - Dev - Coding","Project - Meetings","Project - Team Meetings","NonProject - Misc","Other - Time Off","Project - Training"];
+const DET_OPTS=["Iris Development","Story Groom / Dev Meeting","Staff Meeting","Miscellaneous Activities","Perf automation call","One to one","Release status call","Daily Standup Call","Team Meeting","ServiceNow and Remedy Daily Release Call","ServiceNow Workstream DSUs","Performance Testing and Automation Daily Checkpoint","ServiceNow , ITSM Remedy, IRIS SDLC Releases Scripting Testing and Regression Coordination"];
+
+function makeDDO(selectId, inputId, options, currentVal, placeholder){
+  const isOther=currentVal&&!options.includes(currentVal);
+  const selOpts=options.map(o=>`<option value="${o}"${currentVal===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">- Select -</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other - type manually</option>
+    </select>
+    <input type="text" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="${placeholder}">
+  </div>`;
+}
+
+function makeAdhocMinsDDO(selectId, inputId, currentVal){
+  const opts=[15,30,60,90,120,180,200,240];
+  const isOther=currentVal&&![15,30,60,90,120,180,200,240].includes(Number(currentVal));
+  const selOpts=opts.map(o=>`<option value="${o}"${Number(currentVal)===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">-- Mins --</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other</option>
+    </select>
+    <input type="number" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="Custom mins" min="1" max="480">
+  </div>`;
+}
+
+function makeMinsDDO(selectId, inputId, currentVal){
+  const opts=[15,30,60,90,120,180,200,240,360];
+  const isOther=currentVal&&!opts.includes(Number(currentVal));
+  const selOpts=opts.map(o=>`<option value="${o}"${Number(currentVal)===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">- Mins -</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other</option>
+    </select>
+    <input type="number" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="Custom mins" min="1" max="480">
+  </div>`;
+}
+
+function onDDOChange(selectId, inputId, val){
+  const inp=document.getElementById(inputId);
+  if(val==='__other__'){
+    inp.classList.add('show');
+    inp.value='';
+    inp.focus();
+  } else {
+    inp.classList.remove('show');
+    inp.value=val==='__other__'?'':val;
+  }
+  // trigger live validation if this is a mins field
+  const m=inputId.match(/dpr-m-i-(\d+)/);
+  if(m) liveValidateMins(parseInt(m[1]));
+}
+
+function getDDOVal(selectId, inputId){
+  const sel=document.getElementById(selectId);
+  const inp=document.getElementById(inputId);
+  if(!sel) return inp?inp.value.trim():'';
+  return sel.value==='__other__'?inp.value.trim():sel.value;
+}
+
+/* ── Default pattern store ── */
+let defPats=[];
+
+function getDefaultRows(team,rel){
+  /* Use [RELEASE] token for adjustable rows so phases can substitute per-day */
+  const adjDet=document.getElementById('tog-phases')?.checked?'[RELEASE]':rel;
+  return team==='SMT-Quality Management'?[
+    {et:'Project - Dev - Releases',det:'Release status call',mins:60,adj:false},
+    {et:'Project - Meetings',det:'Daily Standup Call',mins:60,adj:false},
+    {et:'Project - Dev - Testing',det:adjDet,mins:360,adj:true}
+  ]:team==='SMT-TMS'?[
+    {et:'Project - Dev - Coding',det:adjDet,mins:360,adj:true},
+    {et:'Project - Meetings',det:'Story Groom / Dev Meeting',mins:30,adj:false},
+    {et:'Project - Team Meetings',det:'Staff Meeting',mins:30,adj:false},
+    {et:'NonProject - Misc',det:'Miscellaneous Activities',mins:60,adj:false}
+  ]:[
+    {et:'Project - Meetings',det:'Daily Standup Call',mins:60,adj:false},
+    {et:'Project - Meetings',det:'Team Meeting',mins:60,adj:false},
+    {et:'Project - Dev - Coding',det:adjDet,mins:360,adj:true}
+  ];
+}
+
+function addDefPat(){
+  defPats.push({et:'',det:'',mins:60,adj:false});
+  renderDefPats();
+  editDefPat(defPats.length-1);
+}
+
+function delDefPat(i){
+  if(defPats.length<=1){alert('At least one pattern row is required.');return;}
+  defPats.splice(i,1);
+  renderDefPats();
+}
+
+function renderDefPats(){
+  const el=document.getElementById('def-pat');
+  if(!defPats.length){el.innerHTML='<p class="no-team-msg">&#8592; Select a Project Team in Basic Info to preview default patterns.</p>';return;}
+  const fixedTotal=defPats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0);
+  const adjCount=defPats.filter(p=>p.adj).length;
+  let html=`<div class="def-pat-hdr"><span>Effort Type</span><span>Effort Details</span><span>Mins</span><span>Type</span><span></span></div>`;
+  defPats.forEach((p,i)=>{
+    html+=`<div class="def-pat-row" id="dpr-${i}">
+      <span class="pr-val et" id="dpr-et-v-${i}">${esc(p.et)}</span>
+      <span class="pr-val" id="dpr-det-v-${i}">${p.det==='[RELEASE]'?'<span style="color:var(--acc);font-family:\'DM Mono\',monospace;font-size:.68rem;background:var(--adim);border:1px solid rgba(62,207,106,.25);border-radius:4px;padding:1px 7px;">phase label</span>':esc(p.det)}</span>
+      <span class="pr-val"><span class="pr-mins" style="color:var(--acc);font-weight:500">${p.mins}m</span></span>
+      <span class="pr-val"><span class="tag ${p.adj?'tadj':'tfix'}">${p.adj?'ADJ':'FIXED'}</span></span>
+      <div style="display:flex;gap:4px;"><button class="btn-edit" onclick="editDefPat(${i})">Edit</button><button class="btn-del" onclick="delDefPat(${i})" title="Delete row"></button></div>
+    </div>`;
+  });
+  const grandTotal=defPats.reduce((s,p)=>s+p.mins,0);
+  const remaining=480-grandTotal;
+  const remClass=remaining>0?'ok':remaining===0?'warn':'over';
+  html+=`<div class="pat-mins-warn" id="def-mins-warn">Total fixed mins must be less than 480</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+    <button class="btn-add" onclick="addDefPat()">＋ Add Pattern Row</button>
+    <div class="pat-counter">
+      <span><span class="pc-label">TOTAL USED&nbsp;&nbsp;</span><span class="pc-used">${grandTotal}m</span><span class="pc-label"> / 480m</span></span>
+      <span style="color:rgba(255,255,255,.15)">|</span>
+      <span><span class="pc-label">REMAINING&nbsp;&nbsp;</span><span class="pc-remaining ${remClass}">${remaining>=0?remaining:0}m</span></span>
+    </div>
+  </div>`;
+  el.innerHTML=html;
+}
+
+function cancelDefPat(i){
+  // If row was newly added (empty), remove it
+  if(!defPats[i].et&&!defPats[i].det&&defPats.length>1){
+    defPats.splice(i,1);
+  }
+  renderDefPats();
+}
+
+function editDefPat(i){
+  const p=defPats[i];
+  const row=document.getElementById('dpr-'+i);
+  row.classList.add('editing');
+  row.innerHTML=`
+    ${makeDDO('dpr-et-sel-'+i,'dpr-et-i-'+i,ET_OPTS,esc(p.et),'Type custom effort type')}
+    ${makeDDO('dpr-det-sel-'+i,'dpr-det-i-'+i,DET_OPTS,esc(p.det),'Type custom effort details')}
+    <div style="position:relative">
+      ${makeMinsDDO('dpr-m-sel-'+i,'dpr-m-i-'+i,p.mins)}
+      <div id="dpr-m-err-${i}" style="position:absolute;top:100%;left:0;font-size:.62rem;font-family:'DM Mono',monospace;white-space:nowrap;display:none;margin-top:2px;"></div>
+    </div>
+    <select id="dpr-a-i-${i}" onchange="liveValidateMins(${i})">
+      <option value="fixed" ${!p.adj?'selected':''}>Fixed</option>
+      <option value="adj" ${p.adj?'selected':''}>Adjustable</option>
+    </select>
+    <div style="display:flex;gap:4px;"><button class="btn-save" onclick="saveDefPat(${i})" title="Save">✔</button><button class="btn-rm" onclick="cancelDefPat(${i})" title="Cancel">×</button></div>`;
+}
+
+function liveValidateMins(i){
+  const errEl=document.getElementById('dpr-m-err-'+i);
+  const mins=parseInt(getDDOVal('dpr-m-sel-'+i,'dpr-m-i-'+i))||0;
+  const otherTotal=defPats.filter((_,idx)=>idx!==i).reduce((s,p)=>s+p.mins,0);
+  const total=otherTotal+mins;
+  if(total>480){
+    const allowed=480-otherTotal;
+    errEl.textContent=`Total exceeds 480m - max allowed here: ${allowed}m`;
+    errEl.style.display='block';
+    errEl.style.color='var(--red)';
+  } else if(total===480){
+    errEl.textContent=`✔ Total exactly 480m`;
+    errEl.style.display='block';
+    errEl.style.color='var(--acc)';
+  } else {
+    errEl.textContent=`${total}m of 480m used`;
+    errEl.style.display='block';
+    errEl.style.color='var(--mut)';
+  }
+}
+
+function saveDefPat(i){
+  const et=getDDOVal('dpr-et-sel-'+i,'dpr-et-i-'+i);
+  const det=getDDOVal('dpr-det-sel-'+i,'dpr-det-i-'+i);
+  const mins=parseInt(getDDOVal('dpr-m-sel-'+i,'dpr-m-i-'+i));
+  const adj=document.getElementById('dpr-a-i-'+i).value==='adj';
+  if(!et||!det||isNaN(mins)||mins<1){
+    alert('Please fill all fields. Mins must be at least 1.');return;
+  }
+  const testPats=defPats.map((p,idx)=>idx===i?{et,det,mins,adj}:p);
+  const grandTotal=testPats.reduce((s,p)=>s+p.mins,0);
+  if(grandTotal>480){
+    const allowed=480-defPats.filter((_,idx)=>idx!==i).reduce((s,p)=>s+p.mins,0);
+    alert(`Total of all rows cannot exceed 480m. Max you can enter here: ${allowed}m`);return;
+  }
+  const adjCount=testPats.filter(p=>p.adj).length;
+  if(adjCount===0){alert('At least one pattern must be Adjustable.');return;}
+  if(adjCount>1){alert('Only one pattern can be Adjustable.');return;}
+  defPats[i]={et,det,mins,adj};
+  renderDefPats();
+}
+
+/* ── Work Phases ── */
+let phaseId=0;
+const phases=[];/* [{id,from,to,label}] */
+
+function onReleaseInput(){
+  updatePatPrev();
+}
+
+function onPhasesToggle(){
+  const on=document.getElementById('tog-phases').checked;
+  const relField=document.getElementById('f-release');
+  if(on){
+    relField.placeholder='';
+    relField.style.opacity='.4';
+    relField.readOnly=true;
+    document.getElementById('f-release-phase-note').style.display='block';
+    if(document.getElementById('phases-list').children.length===0){
+      addPhase();addPhase();
+    }
+
+
+  } else {
+    relField.placeholder='e.g. ServiceNow Release 25.1';
+    relField.style.opacity='1';
+    relField.readOnly=false;
+    relField.value='';
+    document.getElementById('f-release-phase-note').style.display='none';
+  }
+  updatePatPrev();
+}
+
+function getMonthBounds(){
+  const mon=parseInt(document.getElementById('f-month').value||0);
+  const yr=parseInt(document.getElementById('f-year').value||0);
+  if(!mon||!yr)return{first:null,last:null};
+  const first=new Date(yr,mon-1,1);
+  const last=new Date(yr,mon,0);
+  return{first,last};
+}
+
+function nextWorkday(date){
+  const d=new Date(date);
+  d.setDate(d.getDate()+1);
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1);
+  return d;
+}
+
+function fmtISO(d){
+  if(!d)return'';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* store flatpickr instances for phases */
+const phaseFpFrom={};
+const phaseFpTo={};
+
+function addPhase(){
+  const {first,last}=getMonthBounds();
+  const id=++phaseId;
+  const list=document.getElementById('phases-list');
+  const idx=list.children.length;
+
+  /* Determine default from/to - leave blank, user picks */
+  let defFrom='',defTo='';
+
+  const row=document.createElement('div');
+  row.className='phase-row';
+  row.id='ph-'+id;
+  row.innerHTML=`
+    <div class="phase-num">${idx+1}</div>
+    <div>
+      <div class="phase-lbl">From</div>
+      <input type="text" class="ph-from-fp" id="ph-from-${id}" placeholder="Pick date" readonly style="cursor:pointer;">
+      <input type="hidden" class="ph-from ph-from-hidden" id="ph-from-val-${id}" value="${defFrom}">
+    </div>
+    <div>
+      <div class="phase-lbl">To &nbsp;<span id="ph-snap-badge-${id}" class="phase-snap-badge" style="display:none;">auto-snapped</span></div>
+      <input type="text" class="ph-to-fp" id="ph-to-${id}" placeholder="Pick date" readonly style="cursor:pointer;">
+      <input type="hidden" class="ph-to ph-to-hidden" id="ph-to-val-${id}" value="${defTo}">
+    </div>
+    <div class="phase-label-field">
+      <div class="phase-lbl">Release / Activity Label</div>
+      <input type="text" class="ph-lbl" id="ph-lbl-${id}" placeholder="e.g. ServiceNow Release 25.1">
+    </div>
+    <button class="btn-rm" onclick="removePhase(${id})" title="Remove phase">×</button>`;
+  list.appendChild(row);
+  renumberPhases();
+  limitAddBtn();
+
+  /* Init flatpickr for this phase */
+  const calCfg=getCalConfig();
+  const sharedCfg={
+    dateFormat:'Y-m-d',
+    disableMobile:true,
+    allowInput:false,
+    disable:[d=>d.getDay()===0||d.getDay()===6],
+    minDate:calCfg.minDate||undefined,
+    maxDate:calCfg.maxDate||undefined,
+    onMonthChange:calCfg.onMonthChange||undefined,
+    onYearChange:calCfg.onYearChange||undefined,
+  };
+
+  phaseFpFrom[id]=flatpickr('#ph-from-'+id, Object.assign({},sharedCfg,{
+    defaultDate: defFrom||undefined,
+    onReady(_,ds,fp){ if(defFrom) fp.jumpToDate(new Date(defFrom+'T00:00:00'),false); },
+    onChange(sel){
+      const ds=sel[0]?flatpickr.formatDate(sel[0],'Y-m-d'):'';
+      document.getElementById('ph-from-val-'+id).value=ds;
+      /* ensure to >= from */
+      const toVal=document.getElementById('ph-to-val-'+id).value;
+      if(ds&&toVal&&ds>toVal){
+        phaseFpTo[id]&&phaseFpTo[id].setDate(ds,false);
+        document.getElementById('ph-to-val-'+id).value=ds;
+      }
+      /* update To min date */
+      phaseFpTo[id]&&phaseFpTo[id].set('minDate',ds||calCfg.minDate);
+    }
+  }));
+
+  phaseFpTo[id]=flatpickr('#ph-to-'+id, Object.assign({},sharedCfg,{
+    defaultDate: defTo||undefined,
+    minDate: defFrom||calCfg.minDate||undefined,
+    onReady(_,ds,fp){ if(defTo) fp.jumpToDate(new Date(defTo+'T00:00:00'),false); },
+    onChange(sel){
+      const ds=sel[0]?flatpickr.formatDate(sel[0],'Y-m-d'):'';
+      document.getElementById('ph-to-val-'+id).value=ds;
+      onPhaseToChange(id);
+    }
+  }));
+}
+
+function removePhase(id){
+  if(phaseFpFrom[id]){phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  if(phaseFpTo[id]){phaseFpTo[id].destroy();delete phaseFpTo[id];}
+  const row=document.getElementById('ph-'+id);
+  if(row)row.remove();
+  renumberPhases();
+  limitAddBtn();
+}
+
+function renumberPhases(){
+  const rows=document.getElementById('phases-list').children;
+  for(let i=0;i<rows.length;i++){
+    const numEl=rows[i].querySelector('.phase-num');
+    if(numEl)numEl.textContent=i+1;
+  }
+}
+
+function limitAddBtn(){
+  const count=document.getElementById('phases-list').children.length;
+  document.getElementById('btn-add-phase').style.display=count>=4?'none':'inline-flex';
+}
+
+function onPhaseToChange(id){
+  const list=document.getElementById('phases-list');
+  const rows=Array.from(list.children);
+  const idx=rows.findIndex(r=>r.id==='ph-'+id);
+  if(idx===-1||idx>=rows.length-1)return;
+  const toVal=document.getElementById('ph-to-val-'+id).value;
+  if(!toVal)return;
+  const nextRow=rows[idx+1];
+  const nextId=nextRow.id.replace('ph-','');
+  const snapDate=nextWorkday(new Date(toVal+'T00:00:00'));
+  const snapISO=fmtISO(snapDate);
+  /* Update next phase from via flatpickr */
+  if(phaseFpFrom[nextId]){
+    phaseFpFrom[nextId].setDate(snapISO,false);
+    phaseFpFrom[nextId].set('minDate',snapISO);
+  }
+  document.getElementById('ph-from-val-'+nextId).value=snapISO;
+  const badge=document.getElementById('ph-snap-badge-'+nextId);
+  if(badge){badge.style.display='inline-block';setTimeout(()=>{badge.style.display='none';},3000);}
+}
+
+function onPhaseFromChange(id){
+  /* handled inside flatpickr onChange */
+}
+
+function getPhasesForDate(dateStr){
+  /* Return label for a given YYYY-MM-DD date, or null if no phases active */
+  if(!document.getElementById('tog-phases').checked)return null;
+  const list=document.getElementById('phases-list').children;
+  for(const row of list){
+    const id=row.id.replace('ph-','');
+    const from=document.getElementById('ph-from-val-'+id).value;
+    const to=document.getElementById('ph-to-val-'+id).value;
+    const lbl=document.getElementById('ph-lbl-'+id).value.trim();
+    if(from&&to&&lbl&&dateStr>=from&&dateStr<=to)return lbl;
+  }
+  return null;/* date not covered by any phase */
+}
+
+function validatePhases(){
+  if(!document.getElementById('tog-phases').checked)return true;
+  const list=document.getElementById('phases-list').children;
+  if(!list.length){showPhasesWarn('Please add at least one phase.');return false;}
+  const {first,last}=getMonthBounds();
+  for(const row of list){
+    const id=row.id.replace('ph-','');
+    const from=document.getElementById('ph-from-val-'+id).value;
+    const to=document.getElementById('ph-to-val-'+id).value;
+    const lbl=document.getElementById('ph-lbl-'+id).value.trim();
+    if(!from||!to)return showPhasesWarn('All phases need a From and To date.'),false;
+    if(from>to)return showPhasesWarn('Phase '+row.querySelector('.phase-num').textContent+': From date must be before To date.'),false;
+    if(!lbl)return showPhasesWarn('Please enter a Release / Activity label for each phase.'),false;
+    if(first&&(from<fmtISO(first)||to>fmtISO(last)))
+      return showPhasesWarn('Phase dates must be within the selected month.'),false;
+  }
+  hidePhasesWarn();
+  return true;
+}
+
+function showPhasesWarn(msg){
+  const w=document.getElementById('phases-warn');
+  w.textContent=msg;w.style.display='block';
+}
+function hidePhasesWarn(){
+  document.getElementById('phases-warn').style.display='none';
+}
+
+function updatePatPrev(){
+  const team=document.getElementById('f-team').value,rel=getRel();
+  const el=document.getElementById('def-pat');
+  if(!team){el.innerHTML='<p class="no-team-msg">&#8592; Select a Project Team in Basic Info to preview default patterns.</p>';defPats=[];return;}
+  if(team==='Other'){el.innerHTML='<p class="no-team-msg">Custom Project Team selected - use the Custom Pattern Builder above.</p>';defPats=[];return;}
+  defPats=getDefaultRows(team,rel);
+  renderDefPats();
+}
+
+/* ── Helpers ── */
+function isWknd(d){const w=d.getDay();return w===0||w===6;}
+function fmtD(d){return`${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;}
+function getBiz(y,m){const a=[];let d=new Date(y,m-1,1);while(d.getMonth()===m-1){if(!isWknd(d))a.push(new Date(d));d.setDate(d.getDate()+1);}return a;}
+function showErr(msg){const e=document.getElementById('err-box');e.textContent=''+msg;e.style.display='block';e.scrollIntoView({behavior:'smooth',block:'center'});}
+function clrErr(){document.getElementById('err-box').style.display='none';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ── Generate ── */
+function generate(){
+  clrErr();
+  const name=document.getElementById('f-name').value.trim();
+  const team=document.getElementById('f-team').value;
+  const mon=parseInt(document.getElementById('f-month').value);
+  const yr=parseInt(document.getElementById('f-year').value);
+  if(!name)return showErr('Please enter your full name.');
+  if(!team)return showErr('Please select a Project Team.');
+  if(team==='Other'&&!document.getElementById('f-team-other').value.trim())return showErr('Please enter your custom Project Team name.');
+  if(!mon)return showErr('Please select a month.');
+  if(!yr||yr<2020||yr>2035)return showErr('Please enter a valid year (2020-2035).');
+  const release=getRel();
+  const projTeam=team==='Other'?document.getElementById('f-team-other').value.trim():team;
+  const warns=[];
+  if(!validatePhases())return;
+
+  /* Leaves */
+  const leavesMap={};
+  if(document.getElementById('tog-leave').checked){
+    if(!Object.keys(lvSelectedDates).length)return showErr('Please select at least one leave date.');
+    for(const [ds,tp] of Object.entries(lvSelectedDates)){
+      const d=new Date(ds+'T00:00:00');
+      if(isWknd(d)){warns.push(`${ds} is a weekend - leave skipped.`);continue;}
+      leavesMap[fmtD(d)]=tp;
+    }
+  }
+
+  /* Adhoc */
+  const adhocMap={};
+  if(document.getElementById('tog-adhoc').checked){
+    for(const ahRow of document.getElementById('ah-list').children){
+      const id=ahRow.id.replace('ah-','');
+      const ds=ahRow.dataset.ds||document.getElementById('ahd-'+id)?.value||'';
+      const et=ahRow.dataset.et||getDDOVal('ahe-sel-'+id,'ahe-'+id);
+      const det=ahRow.dataset.det||getDDOVal('ahdet-sel-'+id,'ahdet-'+id);
+      const mn=parseInt(ahRow.dataset.mn||getDDOVal('ahm-sel-'+id,'ahm-'+id));
+      if(!ds||!et||!det||isNaN(mn))return showErr('Please fill in all adhoc fields.');
+      if(mn<1||mn>480)return showErr('Adhoc minutes must be 1-480.');
+      const d=new Date(ds+'T00:00:00');
+      if(isWknd(d))return showErr(`Adhoc date ${ds} is a weekend - only Mon-Fri allowed.`);
+      const k=fmtD(d);
+      if(!adhocMap[k])adhocMap[k]=[];
+      adhocMap[k].push({et,det,mins:mn});
+    }
+    for(const k in adhocMap)adhocMap[k].sort((a,b)=>b.mins-a.mins);
+  }
+
+  /* Patterns */
+  let pats=[];
+  if(document.getElementById('tog-cust').checked){
+    const rows=document.getElementById('pt-body').children;
+    if(!rows.length)return showErr('Please add at least one custom pattern row.');
+    let adjN=0;
+    for(const row of rows){
+      const id=row.id.replace('pt-','');
+      const et=row.dataset.et||getDDOVal('pte-sel-'+id,'pte-'+id);
+      const det=(row.dataset.det||getDDOVal('ptd-sel-'+id,'ptd-'+id)).replace(/\[RELEASE\]/g,release);
+      const mn=parseInt(row.dataset.mn||getDDOVal('ptm-sel-'+id,'ptm-'+id));
+      const adj=(row.dataset.adj||document.getElementById('pta-'+id)?.value||'adj')==='adj';
+      if(!et||!det||isNaN(mn))return showErr('Please fill in all custom pattern fields.');
+      if(adj)adjN++;
+      pats.push({et,det,mins:mn,adj});
+    }
+    if(adjN===0)return showErr('Custom patterns: exactly one row must be Adjustable.');
+    if(adjN>1)return showErr('Custom patterns: only one row can be Adjustable.');
+    if(pats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0)>=480)return showErr('Fixed pattern minutes must total less than 480.');
+  }else{
+    pats=defPats.map(p=>({...p}));
+  }
+
+  /* Build rows */
+  const days=getBiz(yr,mon);
+  const rows=[];
+  let leaveCnt=0;
+  for(const day of days){
+    const k=fmtD(day);
+    /* Determine release label for this day (phase-aware) */
+    const dayISO=fmtISO(day);
+    const dayRelease=getPhasesForDate(dayISO)||release;
+    if(leavesMap[k]){
+      leaveCnt++;
+      rows.push({lob:'SMT',projTeam,et:'Other - Time Off',name,date:k,det:leavesMap[k],mins:480,isL:true});
+    }else{
+      /* Check phase coverage warning */
+      if(document.getElementById('tog-phases').checked&&!getPhasesForDate(dayISO)){
+        warns.push(k+': not covered by any phase - using default label.');
+      }
+      const ahs=adhocMap[k]||[];
+      for(const a of ahs)rows.push({lob:'SMT',projTeam,et:a.et,name,date:k,det:a.det,mins:a.mins,isL:false});
+      const ahSum=ahs.reduce((s,a)=>s+a.mins,0);
+      const fixSum=pats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0);
+      if(ahSum+fixSum>480)return showErr(k+': Adhoc ('+ahSum+'m) + Fixed patterns ('+fixSum+'m) = '+(ahSum+fixSum)+'m which exceeds 480m.');
+      let adjM=Math.max(0,480-fixSum-ahSum);
+      /* Inject phase release label into pattern det where [RELEASE] token present */
+      for(const p of pats){
+        if(!p.adj){
+          const det=p.det.replace(/\[RELEASE\]/g,dayRelease);
+          rows.push({lob:'SMT',projTeam,et:p.et,name,date:k,det,mins:p.mins,isL:false});
+        }
+      }
+      const adjP=pats.find(p=>p.adj);
+      if(adjP){
+        const det=adjP.det.replace(/\[RELEASE\]/g,dayRelease);
+        rows.push({lob:'SMT',projTeam,et:adjP.et,name,date:k,det,mins:adjM,isL:false});
+      }
+    }
+  }
+
+  genRows=rows;
+  genMeta={name,team:projTeam,month:mon,year:yr,release,projTeam,bizDays:days.length,leaveCnt,warns};
+  renderOutput(rows,warns,days.length,leaveCnt);
+}
+
+/* ── Render ── */
+function renderOutput(rows,warns,bizDays,leaveCnt){
+  const totMins=rows.reduce((s,r)=>s+r.mins,0);
+  const workDays=bizDays-leaveCnt;
+
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="sv">${bizDays}</div><div class="sl">Business Days</div></div>
+    <div class="stat"><div class="sv">${rows.length}</div><div class="sl">Total Rows</div></div>
+    <div class="stat"><div class="sv">${totMins}</div><div class="sl">Total Mins</div></div>
+    <div class="stat"><div class="sv">${(totMins/60).toFixed(1)}</div><div class="sl">Total Hours</div></div>`;
+
+  const byType={};
+  rows.forEach(r=>{if(!byType[r.et])byType[r.et]=0;byType[r.et]+=r.mins;});
+  const sorted=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const leaveP=totMins>0?(leaveCnt*480/totMins*100):0;
+  document.getElementById('breakdown').innerHTML=`
+    <div class="bk-card">
+      <div class="bk-title">Work vs Leave</div>
+      <div class="bk-row"><span class="bk-label">Working Days</span><span class="bk-val">${workDays}d · ${((totMins-leaveCnt*480)/60).toFixed(1)}h</span></div>
+      <div class="bk-row"><span class="bk-label">Leave Days</span><span class="bk-val">${leaveCnt}d · ${leaveCnt*8}h</span></div>
+      <div class="bk-bar"><div class="bk-bar-fill" style="width:${100-leaveP}%"></div></div>
+    </div>
+    <div class="bk-card">
+      <div class="bk-title">Hours by Effort Type</div>
+      ${sorted.map(([et,mins])=>`<div class="bk-row"><span class="bk-label">${esc(et)}</span><span class="bk-val">${(mins/60).toFixed(1)}h</span></div>`).join('')}
+    </div>`;
+
+  const tbody=document.getElementById('prev-body');
+  tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(r.isL)tr.className='is-leave';
+    tr.dataset.s=[r.et,r.det,r.date,r.name].join(' ').toLowerCase();
+    tr.innerHTML=`<td>SMT</td><td>${esc(r.projTeam)}</td><td class="${r.isL?'lc':''}">${esc(r.et)}</td><td>${esc(r.name)}</td><td>${r.date}</td><td class="${r.isL?'lc':''}">${esc(r.det)}</td><td class="r">${r.mins}</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tbl-count').textContent=`${rows.length} rows`;
+  document.getElementById('tbl-showing').textContent=`Showing ${rows.length} of ${rows.length} rows`;
+  document.getElementById('tbl-tot').textContent=`Total: ${totMins} mins · ${(totMins/60).toFixed(1)}h`;
+
+  const wb=document.getElementById('warn-notes');
+  if(warns.length){wb.innerHTML='Notes:<br>'+warns.map(w=>`· ${esc(w)}`).join('<br>');wb.style.display='block';}
+  else wb.style.display='none';
+
+  document.getElementById('out').style.display='block';
+  document.getElementById('out').scrollIntoView({behavior:'smooth'});
+  document.getElementById('s5').className='step done';
+}
+
+/* ── Filter table ── */
+function filterTbl(q){
+  const rows=document.getElementById('prev-body').querySelectorAll('tr');
+  let shown=0;
+  rows.forEach(tr=>{const m=!q||tr.dataset.s.includes(q.toLowerCase());tr.style.display=m?'':'none';if(m)shown++;});
+  document.getElementById('tbl-showing').textContent=`Showing ${shown} of ${rows.length} rows`;
+}
+
+/* ── Download real .xlsx via SheetJS ── */
+function downloadXLSX(){
+  if(!genRows.length)return;
+  const m=genMeta;
+  const mName=MONTHS[m.month];
+  const fname=m.name.split(' ')[0]+'_Timesheet_'+mName+'_'+m.year+'.xlsx';
+
+  const headers=["LOB Vertical","Project Team","Effort Type","Associate Name","Date",
+    "Effort Details","Time Spent(In Mins)","Ticket Type","Ticket Number","SLA Met","Job Accuracy","Comments"];
+
+  const wsData=[headers,...genRows.map(r=>[r.lob,r.projTeam,r.et,r.name,r.date,r.det,r.mins,'N/A','N/A','N/A','N/A','N/A'])];
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  /* Column widths */
+  ws['!cols']=[{wch:14},{wch:26},{wch:30},{wch:20},{wch:12},{wch:26},{wch:20},{wch:14},{wch:16},{wch:10},{wch:14},{wch:14}];
+
+  /* Freeze header row */
+  ws['!freeze']={xSplit:0,ySplit:1};
+
+  /* Style header row - SheetJS CE supports cell styles via write options workaround */
+  const range=XLSX.utils.decode_range(ws['!ref']);
+
+  /* Apply header fill/font using cell-level style (SheetJS Pro feature, but we set for compatibility) */
+  for(let C=range.s.c;C<=range.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:0,c:C});
+    if(!ws[addr])continue;
+    ws[addr].s={
+      fill:{patternType:'solid',fgColor:{rgb:'4EA72E'}},
+      font:{bold:true,sz:11,color:{rgb:'000000'},name:'Calibri'},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
+    };
+  }
+
+  /* Style data rows - no background colour, plain */
+  for(let R=1;R<=range.e.r;R++){
+    for(let C=range.s.c;C<=range.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      ws[addr].s={
+        font:{sz:10,name:'Calibri',color:{rgb:'000000'}},
+        alignment:{horizontal:C===6?'right':'left',vertical:'center'},
+      };
+    }
+  }
+
+  /* Auto-filter */
+  ws['!autofilter']={ref:`A1:L1`};
+
+  XLSX.utils.book_append_sheet(wb,ws,'Timetracker');
+  XLSX.writeFile(wb,fname,{bookType:'xlsx',type:'binary',cellStyles:true});
+
+  const btn=document.getElementById('dl-btn');
+  btn.textContent='Downloaded!';
+  setTimeout(()=>{btn.textContent='Download .xlsx';},2500);
+}
+
+/* ── Copy Markdown ── */
+function copyMD(){
+  const m=genMeta;if(!m.name)return;
+  const totMins=genRows.reduce((s,r)=>s+r.mins,0);
+  const mName=MONTHS[m.month];
+  const byType={};
+  genRows.forEach(r=>{if(!byType[r.et])byType[r.et]=0;byType[r.et]+=r.mins;});
+  const typeRows=Object.entries(byType).sort((a,b)=>b[1]-a[1])
+    .map(([et,mins])=>`| ${et} | ${mins} | ${(mins/60).toFixed(1)} | ${(mins/totMins*100).toFixed(1)}% |`).join('\n');
+  const md=`## Timesheet Summary - ${mName} ${m.year}\n\n**Employee:** ${m.name} | **Team:** ${m.team} | **Release:** ${m.release}\n\n### Time Overview\n| Metric | Value |\n|---|---|\n| Business Days | ${m.bizDays} |\n| Total Rows | ${genRows.length} |\n| Total Minutes | ${totMins} |\n| Total Hours | ${(totMins/60).toFixed(1)} |\n\n###  Work vs Leave\n| Category | Days | Hours |\n|---|---|---|\n| Working Days | ${m.bizDays-m.leaveCnt} | ${((totMins-m.leaveCnt*480)/60).toFixed(1)} |\n| Leave Days | ${m.leaveCnt} | ${m.leaveCnt*8} |\n\n### Hours by Effort Type\n| Effort Type | Minutes | Hours | % |\n|---|---|---|---|\n${typeRows}\n\n### Summary\n${m.name} (${m.team}) logged ${(totMins/60).toFixed(1)} hours for ${mName} ${m.year} across ${m.bizDays} business days. ${m.release} was the primary activity. ${m.leaveCnt} leave day(s) recorded.`;
+  const btn=document.querySelector('.dl-btn.sec');
+  /* Try modern clipboard API first, fall back to execCommand for file:// */
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(md).then(()=>{
+      btn.textContent='Copied!';
+      setTimeout(()=>{btn.textContent='Copy Summary';},2000);
+    }).catch(()=>fallbackCopy(md,btn));
+  } else {
+    fallbackCopy(md,btn);
+  }
+}
+
+function fallbackCopy(text,btn){
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();ta.select();
+  try{
+    document.execCommand('copy');
+    btn.textContent='Copied!';
+    setTimeout(()=>{btn.textContent='Copy Summary';},2000);
+  }catch(e){
+    btn.textContent='Failed - try Ctrl+C';
+    setTimeout(()=>{btn.textContent='Copy Summary';},3000);
+  }
+  document.body.removeChild(ta);
+}
+
+/* ── Guide Modal ── */
+function openGuide(){document.getElementById('guide-modal').classList.add('open');}
+function closeGuide(){document.getElementById('guide-modal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGuide();});
+</script>
+</body>
+</html>
