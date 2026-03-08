@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timesheet Generator</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+.flatpickr-calendar{background:#181c24!important;border:1px solid #252b3a!important;box-shadow:0 8px 32px rgba(0,0,0,.5)!important;border-radius:10px!important;font-family:'DM Mono',monospace!important;}
+.flatpickr-day{color:#b0b8cc!important;border-radius:6px!important;}
+.flatpickr-day:hover{background:#1e2330!important;border-color:#3ecf6a!important;color:#eef0f6!important;}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:#3ecf6a!important;border-color:#3ecf6a!important;color:#041208!important;font-weight:700!important;}
+.flatpickr-day.today{border-color:#3ecf6a!important;color:#3ecf6a!important;}
+.flatpickr-day.today.selected{color:#041208!important;}
+.flatpickr-day.flatpickr-disabled,.flatpickr-day.prevMonthDay,.flatpickr-day.nextMonthDay{color:#3a4055!important;}
+.flatpickr-months{background:#111318!important;border-radius:10px 10px 0 0!important;padding:6px 0!important;}
+.flatpickr-month{color:#eef0f6!important;}
+.flatpickr-current-month{color:#eef0f6!important;font-size:.9rem!important;}
+.flatpickr-current-month select,.flatpickr-current-month input{color:#eef0f6!important;background:#181c24!important;}
+.flatpickr-weekday{color:#3ecf6a!important;font-weight:600!important;}
+.flatpickr-prev-month svg,.flatpickr-next-month svg{fill:#3ecf6a!important;}
+.flatpickr-prev-month:hover svg,.flatpickr-next-month:hover svg{fill:#eef0f6!important;}
+.numInputWrapper:hover{background:#1e2330!important;}
+.numInput{color:#eef0f6!important;background:#111318!important;}
+:root {
+  --bg:#0a0c10;--sur:#111318;--sur2:#181c24;--sur3:#1e2330;
+  --bdr:#2e3548;--bdr2:#3a4460;
+  --acc:#3ecf6a;--acc2:#5de07e;--acc3:#2aab54;
+  --adim:rgba(62,207,106,0.10);--adim2:rgba(62,207,106,0.06);
+  --txt:#f0f2f8;--txt2:#c8d0e4;--mut:#8892aa;--dim:#55607a;
+  --red:#f05656;--red-dim:rgba(240,86,86,0.12);
+  --ylw:#f0a832;--ylw-dim:rgba(240,168,50,0.12);
+  --blu:#5b8af0;--r:12px;--r2:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;min-height:100vh;padding:40px 16px 80px;
+  background-image:radial-gradient(ellipse 800px 500px at 50% -100px,rgba(62,207,106,0.07) 0%,transparent 70%),
+  radial-gradient(ellipse 400px 300px at 90% 40%,rgba(91,138,240,0.04) 0%,transparent 60%);}
+.page{max-width:940px;margin:0 auto;}
+
+/* Header */
+.hdr{margin-bottom:36px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.hdr h1{font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-.04em;line-height:1;}
+.hdr h1 em{font-style:italic;color:var(--acc);font-family:'Instrument Serif',serif;}
+.hdr p{color:var(--mut);font-size:.8rem;margin-top:8px;font-family:'DM Mono',monospace;font-weight:300;}
+.badge{background:var(--adim);border:1px solid rgba(62,207,106,.25);color:var(--acc);font-family:'DM Mono',monospace;font-size:.65rem;padding:4px 10px;border-radius:20px;letter-spacing:.08em;}
+
+/* Steps */
+.steps{display:flex;margin-bottom:28px;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;}
+.step{flex:1;padding:10px 8px;text-align:center;font-size:.65rem;font-family:'DM Mono',monospace;color:var(--mut);background:var(--sur);border-right:1px solid var(--bdr);letter-spacing:.06em;text-transform:uppercase;transition:all .3s;}
+.step:last-child{border-right:none;}
+.step:hover{background:var(--adim2);color:var(--acc2);}
+.step.active{background:var(--adim);color:var(--acc);}
+.step.done{background:rgba(62,207,106,.05);color:var(--acc3);}
+.step-num{display:block;font-size:.9rem;font-weight:700;margin-bottom:2px;}
+
+/* Cards */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:24px 26px;margin-bottom:16px;position:relative;transition:border-color .2s;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc3),var(--acc),transparent);opacity:0;transition:opacity .3s;}
+.card:focus-within::before{opacity:1;}
+.card:focus-within{border-color:var(--bdr2);}
+.ct{font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin-bottom:18px;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:10px;}
+.ct-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:var(--adim);border:1px solid rgba(62,207,106,.3);color:var(--acc);font-size:.68rem;font-weight:700;flex-shrink:0;}
+.ct::after{content:'';flex:1;height:1px;background:var(--bdr);}
+.info-banner .ib-icon{width:18px;height:18px;border-radius:50%;background:rgba(62,207,106,.15);border:1px solid rgba(62,207,106,.35);color:var(--acc);font-size:.65rem;font-weight:700;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+@media(max-width:680px){.g2,.g3,.g4{grid-template-columns:1fr 1fr;}}
+@media(max-width:440px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:.7rem;font-weight:600;color:var(--txt2);letter-spacing:.07em;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.hint{color:var(--mut);font-size:.62rem;font-weight:400;text-transform:none;letter-spacing:0;}
+
+/* ── Help / Info UX ── */
+.info-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(62,207,106,.05);border:1px solid rgba(62,207,106,.18);border-radius:var(--r2);padding:11px 14px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:.75rem;color:var(--txt2);line-height:1.65;}
+.info-banner strong{color:var(--acc);font-weight:600;}
+.info-banner.warn{background:rgba(240,168,50,.06);border-color:rgba(240,168,50,.25);color:#d4aa6a;}
+.info-banner.warn strong{color:var(--ylw);}
+
+.field-note{font-size:.67rem;font-family:'DM Mono',monospace;color:var(--mut);margin-top:4px;line-height:1.5;}
+.field-note.accent{color:var(--acc3);}
+.field-note.warn{color:var(--ylw);}
+
+/* Tooltip */
+.tip-wrap{position:relative;display:inline-flex;align-items:center;}
+.tip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--sur3);border:1px solid var(--bdr2);color:var(--mut);font-size:.6rem;font-family:'DM Mono',monospace;cursor:help;margin-left:5px;flex-shrink:0;transition:all .15s;}
+.tip-icon:hover{background:var(--adim);border-color:var(--acc3);color:var(--acc);}
+.tip-box{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#0d1017;border:1px solid var(--bdr2);border-radius:var(--r2);padding:8px 12px;font-size:.7rem;font-family:'DM Mono',monospace;color:var(--txt2);z-index:200;pointer-events:none;transition:opacity .15s;box-shadow:0 4px 16px rgba(0,0,0,.5);line-height:1.6;max-width:260px;white-space:normal;text-align:left;}
+.tip-box::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#0d1017;}
+.tip-wrap:hover .tip-box{visibility:visible;opacity:1;}
+
+/* ── Section hint line ── */
+.sec-hint{font-size:.74rem;color:var(--mut);font-family:'Outfit',sans-serif;line-height:1.6;margin-top:-10px;margin-bottom:14px;padding:0 2px;}
+.sec-hint strong{color:var(--txt2);font-weight:600;}
+
+/* Excel column mapping pill */
+.col-map{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-family:'DM Mono',monospace;color:var(--dim);background:var(--sur3);border:1px solid var(--bdr);border-radius:4px;padding:2px 7px;margin-top:3px;letter-spacing:.03em;}
+.col-map span{color:var(--acc3);font-weight:600;}
+
+/* Section intro text */
+.sec-intro{font-size:.78rem;font-family:'DM Mono',monospace;color:var(--txt2);line-height:1.7;margin-bottom:14px;padding:10px 14px;background:var(--sur2);border-left:3px solid var(--acc3);border-radius:0 var(--r2) var(--r2) 0;display:none;}
+.sec-intro strong{color:var(--txt);}
+.sec-intro.open{display:block;}
+
+/* Pre-generate checklist */
+.gen-checklist{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.gc-item{display:flex;align-items:center;gap:8px;font-size:.75rem;font-family:'DM Mono',monospace;color:var(--mut);transition:color .2s;}
+.gc-item.ok{color:var(--acc3);}
+.gc-item.pending{color:var(--ylw);}
+.gc-dot{width:7px;height:7px;border-radius:50%;background:var(--bdr2);flex-shrink:0;transition:background .2s;}
+.gc-item.ok .gc-dot{background:var(--acc);}
+.gc-item.pending .gc-dot{background:var(--ylw);}
+input,select{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);color:var(--txt);font-family:'DM Mono',monospace;font-size:.9rem;padding:10px 13px;outline:none;transition:border-color .2s,background .2s,box-shadow .2s;width:100%;}
+input:focus,select:focus{border-color:var(--acc3);background:var(--sur3);box-shadow:0 0 0 3px rgba(62,207,106,.08);}
+input:hover:not(:focus),select:hover:not(:focus){border-color:var(--bdr2);}
+input::placeholder{color:var(--mut);}
+select option{background:var(--sur2);color:var(--txt);}
+
+/* Toggle rows */
+.tog-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:14px;}
+.tog-row:hover{border-color:var(--bdr2);background:var(--sur3);}
+.tog-row.active{border-color:rgba(62,207,106,.3);background:var(--adim2);}
+.tog-lbl{font-size:.85rem;color:var(--txt);font-weight:500;flex:1;}
+.tog-lbl small{display:block;font-size:.72rem;color:var(--txt2);font-family:'DM Mono',monospace;margin-top:2px;}
+.tog{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;}
+.sli{position:absolute;inset:0;background:var(--sur3);border-radius:22px;border:1px solid var(--bdr2);transition:.25s;}
+.sli::before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:var(--mut);border-radius:50%;transition:.25s;}
+.tog input:checked+.sli{background:rgba(62,207,106,.2);border-color:var(--acc);}
+.tog input:checked+.sli::before{transform:translateX(18px);background:var(--acc);}
+
+/* Dynamic rows */
+.dyn-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.dyn-row{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:10px 12px;display:grid;gap:8px;align-items:center;animation:slideIn .2s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.dyn-row input,.dyn-row select{background:var(--bg);border-color:var(--bdr);}
+.lv-row{grid-template-columns:170px 1fr 32px;}
+.ah-row{grid-template-columns:150px 1fr 1fr 80px auto;align-items:center;gap:8px;padding:10px 6px;border-bottom:1px solid var(--bdr);min-width:0;}
+.ah-row.editing{background:var(--sur3);border-radius:var(--r2);padding:10px 8px;border:1px solid var(--bdr2);margin-bottom:4px;border-bottom:none;}
+@media(max-width:680px){.lv-row,.ah-row{grid-template-columns:1fr 1fr;}}
+
+/* ── Mobile Responsive ── */
+@media(max-width:700px){
+  body{padding:16px 10px 60px;}
+  .hdr{margin-bottom:20px;}
+  .hdr h1{font-size:1.5rem;}
+  .hdr p{font-size:.72rem;}
+  .steps{border-radius:8px;margin-bottom:16px;}
+  .step{padding:8px 4px;font-size:.55rem;letter-spacing:.02em;}
+  .step-num{font-size:.75rem;}
+  .card{padding:16px 14px;margin-bottom:12px;}
+  .ct{font-size:.58rem;margin-bottom:14px;}
+
+  /* LOB row */
+  #basic-row1,#basic-row1b,#basic-row2{grid-template-columns:1fr 1fr !important;}
+
+  /* Basic info grid → stack */
+  #card-basic > div[style*="grid-template-columns:2fr"]{
+    grid-template-columns:1fr !important;
+  }
+  #card-basic > div[style*="grid-template-columns:2fr 1fr"]{
+    grid-template-columns:1fr 1fr !important;
+  }
+
+  /* Pattern rows */
+  .def-pat-hdr,.def-pat-row{
+    grid-template-columns:1fr 1fr !important;
+    gap:4px !important;
+  }
+  .def-pat-hdr span:nth-child(3),
+  .def-pat-hdr span:nth-child(4),
+  .def-pat-hdr span:nth-child(5){display:none;}
+  .def-pat-row .pr-val:nth-child(3),
+  .def-pat-row .pr-val:nth-child(4){display:none;}
+
+  /* Adhoc header + rows */
+  .ah-row{grid-template-columns:110px 1fr 1fr !important;gap:6px !important;}
+
+  /* Pat table */
+  .pt-wrap{overflow-x:auto;}
+  .pt-tbl{min-width:480px;}
+
+  /* Leave section */
+  #lv-add-row{grid-template-columns:1fr !important;}
+  #lv-add-row input,#lv-add-row select{width:100% !important;}
+
+  /* Gen button */
+  .gen-btn{font-size:.88rem;padding:14px;}
+
+  /* Modal */
+  .modal{max-width:98vw;max-height:92vh;margin:4vh auto;}
+
+  /* DD wrap */
+  .dd-wrap select,.dd-wrap input{font-size:.72rem;padding:7px 8px;}
+
+  /* pat counter */
+  .pat-counter{font-size:.68rem;gap:10px;}
+}
+
+@media(max-width:420px){
+  .hdr h1{font-size:1.25rem;}
+  .step-num{font-size:.7rem;}
+  .step{font-size:.48rem;}
+  #basic-row1,#basic-row1b,#basic-row2{grid-template-columns:1fr !important;}
+  .ah-row{grid-template-columns:90px 1fr !important;}
+}
+.btn-rm{background:none;border:1px solid transparent;color:var(--mut);font-size:.85rem;cursor:pointer;padding:4px 6px;border-radius:6px;opacity:.6;transition:all .15s;line-height:1;}
+.btn-rm:hover{opacity:1;color:var(--red);border-color:var(--red-dim);background:var(--red-dim);}
+.btn-add{background:var(--adim);border:1px dashed rgba(62,207,106,.35);color:var(--acc);font-family:'DM Mono',monospace;font-size:.75rem;padding:8px 16px;border-radius:var(--r2);cursor:pointer;transition:all .15s;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
+.btn-add:hover{background:rgba(62,207,106,.18);border-color:var(--acc);}
+
+/* Pattern preview */
+.pat-info{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:14px 16px;}
+.pat-row-prev{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr);font-family:'DM Mono',monospace;font-size:.78rem;color:var(--txt2);}
+.pat-row-prev:last-child{border-bottom:none;padding-bottom:0;}
+.pat-row-prev:first-child{padding-top:0;}
+.pr-et{color:var(--txt);font-weight:500;flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pr-det{flex:2;color:var(--txt2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pr-mins{flex:0 0 50px;text-align:right;color:var(--acc);font-weight:500;}
+.tag{font-size:.6rem;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:500;letter-spacing:.05em;flex-shrink:0;}
+.tfix{background:rgba(62,207,106,.12);color:var(--acc2);border:1px solid rgba(62,207,106,.25);}
+.tadj{background:rgba(240,168,50,.12);color:var(--ylw);border:1px solid rgba(240,168,50,.25);}
+.dd-wrap{display:flex;flex-direction:column;gap:4px;width:100%;}
+.dd-wrap select{width:100%;font-size:.8rem;padding:6px 9px;}
+.dd-other{display:none;width:100%;}
+.dd-other.show{display:block;}
+.no-team-msg{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--txt2);}
+.def-pat-row{display:grid;grid-template-columns:1fr 1fr 70px 100px 68px;gap:8px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--bdr);font-family:'DM Mono',monospace;font-size:.8rem;}
+.def-pat-row:last-child{border-bottom:none;}
+.def-pat-row.editing{background:var(--sur3);border-radius:var(--r2);padding:10px 8px;border:1px solid var(--bdr2);}
+.def-pat-row .pr-val{color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.def-pat-row .pr-val.et{color:var(--txt);font-weight:500;}
+.def-pat-row input,.def-pat-row select{font-size:.8rem;padding:6px 9px;}
+.btn-edit{background:var(--adim);border:1px solid rgba(62,207,106,.3);color:var(--acc);font-size:.72rem;padding:5px 12px;border-radius:5px;cursor:pointer;font-family:'DM Mono',monospace;font-weight:600;letter-spacing:.04em;transition:all .15s;}
+.btn-edit:hover{background:rgba(62,207,106,.2);border-color:var(--acc);box-shadow:0 0 8px rgba(62,207,106,.15);}
+.btn-save{background:var(--adim);border:1px solid rgba(62,207,106,.35);color:var(--acc);font-size:.68rem;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .15s;}
+.btn-save:hover{background:rgba(62,207,106,.2);}
+.lv-chip{display:inline-flex;align-items:center;gap:5px;background:var(--sur3);border:1px solid var(--bdr2);
+  border-radius:20px;padding:4px 10px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--txt2);}
+.lv-chip .chip-date{color:var(--acc);font-weight:600;}
+.lv-chip .chip-rm{background:none;border:none;color:var(--mut);cursor:pointer;padding:0;font-size:.8rem;line-height:1;margin-left:2px;}
+.lv-chip .chip-rm:hover{color:var(--red);}
+.btn-del{background:none;border:1px solid transparent;color:var(--mut);font-size:.85rem;cursor:pointer;padding:4px 7px;border-radius:6px;opacity:.6;transition:all .15s;line-height:1;}
+.btn-del:hover{opacity:1;color:var(--red);border-color:var(--red-dim);background:var(--red-dim);}
+.def-pat-hdr{display:grid;grid-template-columns:1fr 1fr 70px 100px 68px;gap:8px;padding:0 6px 10px;font-size:.7rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.08em;text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:6px;}
+.pat-mins-warn{font-size:.75rem;font-family:'DM Mono',monospace;color:var(--red);margin-top:8px;display:none;}
+.pat-counter{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-family:'DM Mono',monospace;font-size:.82rem;}
+.pat-counter .pc-label{color:var(--txt2);font-weight:500;}
+.pat-counter .pc-used{color:var(--acc);font-weight:700;font-size:.87rem;}
+.pat-counter .pc-remaining{font-weight:700;font-size:.87rem;}
+.pat-counter .pc-remaining.ok{color:var(--acc3);}
+.pat-counter .pc-remaining.warn{color:#f0a832;}
+.pat-counter .pc-remaining.over{color:var(--red);}
+
+/* Custom pattern table */
+.pt-wrap{overflow-x:auto;}
+.pt-tbl{width:100%;border-collapse:collapse;font-size:.8rem;min-width:580px;}
+.pt-tbl th{text-align:left;font-size:.68rem;font-family:'DM Mono',monospace;letter-spacing:.1em;color:var(--txt2);text-transform:uppercase;padding:0 8px 10px;font-weight:600;}
+.pt-tbl td{padding:4px 6px;}
+.pt-tbl td input,.pt-tbl td select{font-size:.78rem;padding:7px 10px;}
+
+/* Error */
+.err{background:var(--red-dim);border:1px solid rgba(240,86,86,.3);border-radius:var(--r2);padding:12px 16px;font-size:.8rem;color:#ff9090;font-family:'DM Mono',monospace;margin-bottom:16px;display:none;animation:slideIn .2s ease;}
+
+/* Generate button */
+.gen-btn{width:100%;padding:17px;background:linear-gradient(135deg,var(--acc3),var(--acc));border:none;border-radius:var(--r);color:#041208;font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;cursor:pointer;transition:all .2s;margin-top:6px;position:relative;overflow:hidden;}
+.gen-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.1));opacity:0;transition:opacity .2s;}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(62,207,106,.25);}
+.gen-btn:hover::after{opacity:1;}
+.gen-btn:active{transform:translateY(0);box-shadow:none;}
+
+/* Output */
+#out{display:none;margin-top:36px;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.out-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
+.out-hdr h2{font-size:1.2rem;font-weight:700;letter-spacing:-.02em;}
+.out-hdr h2 span{color:var(--acc);}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;}
+.dl-btn{background:linear-gradient(135deg,var(--acc3),var(--acc));border:none;border-radius:var(--r2);color:#041208;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82rem;padding:10px 22px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.dl-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(62,207,106,.3);}
+.dl-btn.sec{background:transparent;border:1px solid var(--bdr2);color:var(--txt2);}
+.dl-btn.sec:hover{border-color:var(--acc3);color:var(--acc);background:var(--adim);box-shadow:none;transform:none;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;}
+.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc3),var(--acc),transparent);}
+.stat .sv{font-size:1.7rem;font-weight:800;color:var(--acc);letter-spacing:-.03em;line-height:1;}
+.stat .sl{font-size:.66rem;font-family:'DM Mono',monospace;color:var(--mut);margin-top:5px;letter-spacing:.05em;text-transform:uppercase;}
+
+/* Breakdown */
+.breakdown{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+@media(max-width:540px){.breakdown{grid-template-columns:1fr;}}
+.bk-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;}
+.bk-title{font-size:.62rem;font-family:'DM Mono',monospace;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+.bk-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:.8rem;}
+.bk-row:last-child{border-bottom:none;padding-bottom:0;}
+.bk-label{color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;}
+.bk-val{font-family:'DM Mono',monospace;color:var(--txt);font-weight:500;flex-shrink:0;}
+.bk-bar{width:100%;height:4px;background:var(--sur3);border-radius:4px;margin-top:10px;overflow:hidden;}
+.bk-bar-fill{height:100%;background:linear-gradient(90deg,var(--acc3),var(--acc));border-radius:4px;transition:width .8s ease;}
+
+/* Table */
+.tbl-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.tbl-hdr{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.tbl-hdr span{font-size:.7rem;font-family:'DM Mono',monospace;color:var(--mut);}
+.tbl-search{background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-family:'DM Mono',monospace;font-size:.78rem;padding:6px 12px;outline:none;width:200px;transition:border-color .2s;}
+.tbl-search:focus{border-color:var(--acc3);}
+.tbl-wrap{overflow-x:auto;}
+table.prev{width:100%;border-collapse:collapse;font-size:.75rem;font-family:'DM Mono',monospace;min-width:1000px;}
+table.prev thead th{background:var(--sur2);color:var(--mut);font-weight:600;padding:10px 13px;text-align:left;white-space:nowrap;border-bottom:2px solid var(--acc3);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;}
+table.prev tbody tr{transition:background .1s;}
+table.prev tbody tr:nth-child(even){background:rgba(255,255,255,.015);}
+table.prev tbody tr:nth-child(odd){background:transparent;}
+table.prev tbody tr:hover{background:var(--adim);}
+table.prev tbody tr.is-leave{background:var(--ylw-dim)!important;}
+table.prev tbody tr.is-leave:hover{background:rgba(240,168,50,.18)!important;}
+table.prev td{padding:8px 13px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt2);}
+table.prev td:first-child,table.prev td:nth-child(4){color:var(--txt);}
+table.prev td.r{text-align:right;color:var(--acc);font-weight:500;}
+table.prev td.lc{color:var(--ylw);}
+.tbl-ftr{padding:12px 18px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--mut);}
+
+/* Warn */
+.warn-box{background:var(--ylw-dim);border:1px solid rgba(240,168,50,.25);border-radius:var(--r2);padding:12px 16px;font-size:.77rem;font-family:'DM Mono',monospace;color:var(--ylw);line-height:1.9;margin-bottom:16px;display:none;}
+
+/* Phases */
+.phase-row{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:10px 12px;display:grid;grid-template-columns:28px 1fr 1fr 1fr auto;gap:8px;align-items:center;animation:slideIn .2s ease;}
+.phase-row.editing{background:var(--sur3);border-color:var(--bdr2);}
+.phase-num{font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;color:var(--acc);text-align:center;}
+.phase-row input{background:var(--bg);border-color:var(--bdr);}
+.phase-row input:focus{border-color:var(--acc3);}
+.phase-lbl{font-size:.67rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;font-weight:600;}
+.phase-snap-badge{font-size:.6rem;font-family:'DM Mono',monospace;color:var(--acc3);background:var(--adim);border:1px solid rgba(62,207,106,.2);border-radius:10px;padding:1px 7px;display:inline-block;margin-top:3px;}
+.phase-val{font-family:'DM Mono',monospace;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.phase-val.date{color:var(--acc);font-weight:600;}
+.phase-val.label{color:var(--txt);font-weight:500;}
+.phase-err{font-size:.68rem;font-family:'DM Mono',monospace;color:var(--red);margin-top:6px;padding:4px 10px;background:rgba(240,86,86,.08);border:1px solid rgba(240,86,86,.25);border-radius:5px;display:none;grid-column:1/-1;line-height:1.5;}
+@media(max-width:600px){.phase-row{grid-template-columns:24px 1fr 1fr;}.phase-row .phase-label-field{grid-column:1/-1;}}
+
+/* Sep */
+.sep{height:1px;background:var(--bdr);margin:32px 0;position:relative;}
+.sep::before{content:'OUTPUT';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--bg);padding:0 12px;font-size:.6rem;font-family:'DM Mono',monospace;color:var(--dim);letter-spacing:.15em;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--sur);}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--acc3);}
+
+/* Guide Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{background:var(--sur);border:1px solid var(--bdr2);border-radius:var(--r);max-width:680px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.modal-hdr{padding:20px 24px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--sur);z-index:1;}
+.modal-hdr h2{font-size:1rem;font-weight:700;letter-spacing:-.01em;}
+.modal-hdr h2 span{color:var(--acc);}
+.modal-close{background:none;border:1px solid var(--bdr);color:var(--mut);font-size:1rem;width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-body{padding:20px 24px 24px;}
+.guide-step{display:flex;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--bdr);}
+.guide-step:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.guide-num{width:28px;height:28px;border-radius:50%;background:var(--adim);border:1px solid rgba(62,207,106,.3);color:var(--acc);font-family:'DM Mono',monospace;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.guide-content h3{font-size:.85rem;font-weight:700;color:var(--txt);margin-bottom:5px;letter-spacing:.01em;}
+.guide-content p{font-size:.8rem;color:var(--txt2);line-height:1.7;font-family:'DM Mono',monospace;}
+.guide-content p strong{color:var(--acc);font-weight:600;}
+.guide-tip{background:var(--adim2);border:1px solid rgba(62,207,106,.18);border-radius:6px;padding:9px 13px;margin-top:8px;font-size:.75rem;font-family:'DM Mono',monospace;color:var(--txt2);line-height:1.6;}
+.guide-tip b{color:var(--acc3);}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- Header -->
+<div class="hdr">
+  <div>
+    <h1>Time<em>sheet</em> Generator</h1>
+    <p>// fill in your details below &rarr; generate &rarr; download a ready-to-submit .xlsx &mdash; runs entirely in your browser, nothing is uploaded</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <button onclick="openGuide()" style="background:transparent;border:1px solid var(--bdr2);color:var(--txt2);font-family:'DM Mono',monospace;font-size:.72rem;padding:7px 14px;border-radius:20px;cursor:pointer;transition:all .2s;letter-spacing:.04em;" onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--acc)'" onmouseout="this.style.borderColor='var(--bdr2)';this.style.color='var(--txt2)'">How to Use</button>
+    <span class="badge">v5.0 &middot; Browser-only</span>
+  </div>
+</div>
+
+<!-- Steps -->
+<div class="steps">
+  <div class="step active" id="s1" onclick="scrollToCard('card-basic')" style="cursor:pointer"><span class="step-num">01</span>Basic Info</div>
+  <div class="step" id="s2" onclick="scrollToCard('card-patterns')" style="cursor:pointer"><span class="step-num">02</span>Patterns</div>
+  <div class="step" id="s3" onclick="scrollToCard('card-leave')" style="cursor:pointer"><span class="step-num">03</span>Leave Days</div>
+  <div class="step" id="s4" onclick="scrollToCard('card-adhoc')" style="cursor:pointer"><span class="step-num">04</span>Adhoc</div>
+  <div class="step" id="s5" onclick="scrollToCard('card-generate')" style="cursor:pointer"><span class="step-num">05</span>Generate</div>
+</div>
+
+<div id="err-box" class="err"></div>
+
+<!-- 01 BASIC INFO -->
+<div class="card" id="card-basic">
+  <div class="ct"><span class="ct-num">01</span>Basic Info</div>
+  <div class="sec-hint">Fill in your <strong>name, team, and month</strong> first — these are required. Set Month &amp; Year <strong>before</strong> adding leave or adhoc entries.</div>
+
+  <!-- Row 1: LOB + Full Name + Project Team + Activity/Efforts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px;" id="basic-row1">
+    <div class="field">
+      <label>
+        LOB Vertical
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">Line of Business. This fills the <b>LOB Vertical</b> column in every row of your Excel. Choose the one your team sits under — e.g. SMT for Service Management.</span></span>
+      </label>
+      <select id="f-lob" onchange="onLobChange()">
+        <option value="SMT" selected>SMT</option>
+        <option value="SDLT">SDLT</option>
+        <option value="MEMT">MEMT</option>
+        <option value="PDDT">PDDT</option>
+        <option value="Other">Other — type manually</option>
+      </select>
+      <div class="col-map">Excel col → <span>LOB Vertical</span></div>
+    </div>
+    <div class="field">
+      <label>
+        Associate Name
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">Your full display name exactly as it should appear in the <b>Associate Name</b> column in the Excel. e.g. <i>Shaik Mohsin</i></span></span>
+      </label>
+      <input id="f-name" type="text" placeholder="e.g. Shaik Mohsin" oninput="updateSteps()">
+      <div class="col-map">Excel col → <span>Associate Name</span></div>
+    </div>
+    <div class="field">
+      <label>
+        Project Team
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">Your assigned team. Selecting a named team auto-loads the correct daily pattern for you. Choosing <b>Other</b> lets you build a custom pattern from scratch.</span></span>
+      </label>
+      <select id="f-team" onchange="onTeamChange();updateSteps()">
+        <option value="">&#8212; Select &#8212;</option>
+        <option value="SMT-Quality Management">SMT-Quality Management</option>
+        <option value="SMT-ITSMRemedy">SMT-ITSMRemedy</option>
+        <option value="SMT-TMS">SMT-TMS</option>
+        <option value="Other">Other — enter manually</option>
+      </select>
+      <div class="col-map">Excel col → <span>Project Team</span></div>
+    </div>
+    <div class="field" id="release-field-wrap">
+      <label>
+        Activity / Efforts
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">The release or project label that appears in <b>Effort Details</b> for your main task rows. e.g. <i>ServiceNow Release 25.3</i>. Leave blank to use "General Activities". Skip this if you're using Work Phases — each phase has its own label.</span></span>
+      </label>
+      <input id="f-release" type="text" placeholder="e.g. ServiceNow Release 25.3" oninput="onReleaseInput()">
+      <div id="f-release-hint" style="font-size:.67rem;font-family:'DM Mono',monospace;color:#f0a832;margin-top:5px;padding:4px 8px;background:rgba(240,168,50,.08);border:1px solid rgba(240,168,50,.2);border-radius:5px;">&#9888; Empty → main task rows will show <strong>General Activities</strong> in Effort Details</div>
+      <div id="f-release-phase-note" style="display:none;margin-top:6px;font-size:.73rem;font-family:'DM Mono',monospace;color:var(--acc);font-weight:600;letter-spacing:.04em;padding:5px 10px;background:var(--adim);border:1px solid rgba(62,207,106,.25);border-radius:6px;">
+        &#x2713; Each Work Phase below has its own label — this field is overridden per day
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 1b: Custom LOB + Custom Team (shown conditionally) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;" id="basic-row1b">
+    <div class="field" id="lob-other-wrap" style="display:none;">
+      <label>Custom LOB Name</label>
+      <input id="f-lob-other" type="text" placeholder="e.g. ABCD" oninput="updateSteps()">
+      <div class="field-note">Type your LOB exactly as it should appear in the Excel</div>
+    </div>
+    <div class="field" id="other-team-cell" style="display:none;">
+      <label>Custom Project Team Name</label>
+      <input id="f-team-other" type="text" placeholder="e.g. SMT-Analytics" oninput="updateSteps()">
+      <div class="field-note">This will appear in the <em>Project Team</em> column of the Excel</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Month + Year -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="basic-row2">
+    <div class="field">
+      <label>
+        Timesheet Month
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">The month you are filing this timesheet for. The tool generates one row per working day (Mon–Fri) in this month. Weekends are skipped automatically.</span></span>
+      </label>
+      <select id="f-month" onchange="onMonthYearChange()">
+        <option value="">&#8212; Select Month &#8212;</option>
+        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>
+        Timesheet Year
+        <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">The year for this timesheet. Defaults to the current year. Use "Other" to type manually if needed.</span></span>
+      </label>
+      <div class="dd-wrap" id="year-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WORK PHASES -->
+<div class="card" id="card-phases">
+  <div class="ct"><span class="ct-num">1b</span>Work Phases <span style="font-size:.58rem;font-weight:400;color:var(--mut);text-transform:none;letter-spacing:0;font-family:'Outfit',sans-serif;">Optional &middot; Named teams only</span> </div>
+  
+  <div class="sec-hint">Only needed if you worked on <strong>different releases in the same month</strong>. Each phase gets its own date range and label. Skip this if you had just one activity all month.</div>
+  <div class="tog-row" id="tr-phases" onclick="togClick('tog-phases','phases-sec','tr-phases');onPhasesToggle()">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-phases" onchange="togChange('phases-sec','tr-phases',this.checked);onPhasesToggle()">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I worked on multiple releases or activities this month
+      <small>e.g. Release 25.1 for the first 2 weeks, then Release 25.2 for the rest — turn this on to split them</small>
+    </div>
+  </div>
+  <div id="phases-sec" style="display:none;margin-top:4px;">
+    <div class="sec-intro open">
+      <strong>How to use:</strong> Click <em>＋ Add Phase</em> below, pick a From date and a To date using the calendar, type a label (e.g. <em>ServiceNow Release 25.1</em>), then click <strong>Save</strong>. The row collapses to a summary — click <strong>Edit</strong> any time to change it. Days not covered by any phase fall back to the Activity / Efforts value above, or <em>General Activities</em>.
+    </div>
+    <div id="phases-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+    <button class="btn-add" onclick="addPhase()" id="btn-add-phase">＋ Add Phase</button>
+    <div id="phases-warn" style="display:none;margin-top:10px;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--red);padding:8px 12px;background:var(--red-dim);border:1px solid rgba(240,86,86,.3);border-radius:var(--r2);"></div>
+  </div>
+</div>
+
+<!-- 02 PATTERNS -->
+<div class="card" id="card-patterns">
+  <div class="ct"><span class="ct-num">02</span>Daily Patterns</div>
+  <div class="sec-hint">Your team's pattern is <strong>pre-loaded automatically</strong>. A pattern is your typical working day split into effort types totalling 480 min. The <strong>ADJ row</strong> fills remaining time each day.</div>
+
+  <div class="tog-row" id="tr-cust" onclick="togClick('tog-cust','cust-sec','tr-cust');custChange()">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-cust" onchange="togChange('cust-sec','tr-cust',this.checked);custChange()">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">Use custom patterns
+      <small>Your team's default pattern is shown below. Toggle this on only if you need to override it with your own rows</small>
+    </div>
+  </div>
+
+  <div id="def-pat" class="pat-info">
+    <p class="no-team-msg">&#8592; Select a Project Team in Step 1 to see the default daily pattern for your team.</p>
+  </div>
+
+  <div id="cust-sec" style="display:none;margin-top:4px">
+    <div class="sec-intro open" style="margin-bottom:12px;">
+      <strong>Build your own pattern:</strong> Add rows using <em>＋ Add Pattern Row</em>. Each row needs an <strong>Effort Type</strong>, <strong>Effort Details</strong>, and <strong>Minutes</strong>. Set one row as <strong>Adjustable (ADJ)</strong> — it auto-fills remaining time to reach 480m each day.
+    </div>
+    <div class="pt-wrap">
+      <table class="pt-tbl">
+        <thead><tr>
+          <th>Effort Type <span style="color:var(--dim);font-weight:400;font-size:.62rem;">→ Excel col</span></th>
+          <th>Effort Details <span style="color:var(--dim);font-weight:400;font-size:.62rem;">→ Excel col</span></th>
+          <th style="width:80px">Mins</th>
+          <th style="width:120px">Type
+            <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box"><b>Fixed</b>: same minutes every day.<br><b>Adjustable (ADJ)</b>: absorbs remaining time. Exactly one ADJ row is required.</span></span>
+          </th>
+          <th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="pt-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+      <button class="btn-add" onclick="addPat()">＋ Add Pattern Row</button>
+      <div class="pat-counter" id="pt-counter" style="display:none;">
+        <span><span class="pc-label">TOTAL USED&nbsp;&nbsp;</span><span class="pc-used" id="pt-used">0m</span><span class="pc-label"> / 480m</span></span>
+        <span style="color:rgba(255,255,255,.15)">|</span>
+        <span><span class="pc-label">REMAINING&nbsp;&nbsp;</span><span class="pc-remaining ok" id="pt-remaining">480m</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 LEAVE DAYS -->
+<div class="card" id="card-leave">
+  <div class="ct"><span class="ct-num">03</span>Leave Days <span style="font-size:.58rem;font-weight:400;color:var(--mut);text-transform:none;letter-spacing:0;font-family:'Outfit',sans-serif;">Optional</span></div>
+  <div class="sec-hint">Toggle on if you had days off. Leave days <strong>replace the full day's pattern</strong> with a single 480 min row. Pick dates, choose the type, click + Add Leaves.</div>
+  <div class="tog-row" id="tr-leave" onclick="togClick('tog-leave','lv-sec','tr-leave')">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-leave" onchange="togChange('lv-sec','tr-leave',this.checked)">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I had leave days this month
+      <small>Sick Leave · Planned Leave · Comp Off · Public Holiday — each gets its own Effort Type in the Excel</small>
+    </div>
+  </div>
+  <div id="lv-sec" style="display:none">
+    <!-- Add Leave Row -->
+    <div id="lv-add-row" style="display:grid;grid-template-columns:1fr 200px auto;gap:14px;align-items:end;margin-top:4px;padding:14px 16px;background:var(--sur2);border:1px dashed rgba(62,207,106,.3);border-radius:var(--r2);">
+      <div class="field">
+        <label style="font-size:.63rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Select Date(s) <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim);font-size:.6rem;">— click to open calendar, pick one or multiple weekdays</span></label>
+        <input type="text" id="lv-cal-input" placeholder="Click here to pick leave dates" readonly style="cursor:pointer;width:100%;">
+      </div>
+      <div class="field">
+        <label style="font-size:.63rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Leave Type
+          <span class="tip-wrap"><span class="tip-icon">?</span><span class="tip-box">This becomes the <b>Effort Details</b> value for the leave row. Holiday also changes the Effort Type to <em>Other - Public Holiday</em>.</span></span>
+        </label>
+        <select id="lv-type" style="width:100%;">
+          <option>Sick Leave</option>
+          <option>Planned Leave</option>
+          <option>Comp Off</option>
+          <option>Holiday</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn-add" onclick="addLvEntry()" style="white-space:nowrap;">＋ Add Leaves</button>
+      </div>
+    </div>
+
+    <!-- Grouped leave sections -->
+    <div id="lv-groups" style="margin-top:16px;display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="lv-count" style="font-size:.75rem;font-family:'DM Mono',monospace;color:var(--txt2);margin-top:10px;padding:8px 12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);display:none;"></div>
+  </div>
+</div>
+
+<!-- 04 ADHOC -->
+<div class="card" id="card-adhoc">
+  <div class="ct"><span class="ct-num">04</span>Adhoc Efforts <span style="font-size:.58rem;font-weight:400;color:var(--mut);text-transform:none;letter-spacing:0;font-family:'Outfit',sans-serif;">Optional</span></div>
+  <div class="sec-hint">For <strong>one-off extra work on a specific date</strong> (training, special calls). Minutes are <strong>deducted from the ADJ row</strong> so the day still totals 480 min.</div>
+  <div class="tog-row" id="tr-adhoc" onclick="togClick('tog-adhoc','ah-sec','tr-adhoc')">
+    <label class="tog" onclick="event.stopPropagation()">
+      <input type="checkbox" id="tog-adhoc" onchange="togChange('ah-sec','tr-adhoc',this.checked)">
+      <span class="sli"></span>
+    </label>
+    <div class="tog-lbl">I have extra efforts on specific days this month
+      <small>e.g. a one-off training, a special release call, or extra task — logged on top of your daily pattern</small>
+    </div>
+  </div>
+  <div id="ah-sec" style="display:none">
+    <div style="display:grid;grid-template-columns:150px 1fr 1fr 80px auto;gap:8px;padding:6px 6px 10px;font-size:.68rem;font-family:'DM Mono',monospace;color:var(--txt2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:6px;margin-top:4px;">
+      <span>Date</span><span>Effort Type <span style="color:var(--dim);font-weight:400;">→ Excel col</span></span><span>Effort Details <span style="color:var(--dim);font-weight:400;">→ Excel col</span></span><span>Mins</span><span></span>
+    </div>
+    <div class="dyn-list" id="ah-list"></div>
+    <button class="btn-add" onclick="addAdhoc()">＋ Add Adhoc Entry</button>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:0;border-color:rgba(62,207,106,.25);background:rgba(62,207,106,.03);" id="card-generate-wrap">
+  <div class="ct"><span class="ct-num">05</span>Generate Timesheet</div>
+
+  <!-- Pre-generate summary panel -->
+  <div id="pre-gen-summary" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:14px 16px;margin-bottom:16px;font-family:'DM Mono',monospace;font-size:.78rem;">
+    <div style="color:var(--mut);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:10px;">Summary before you generate</div>
+    <div id="pre-gen-rows" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+
+  <!-- Pattern preview in generate card -->
+  <div id="gen-pat-preview" style="display:none;margin-bottom:16px;">
+    <div style="font-size:.62rem;font-family:'DM Mono',monospace;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:8px;">Daily Pattern that will be applied</div>
+    <div id="gen-pat-rows" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r2);padding:10px 14px;display:flex;flex-direction:column;gap:0;"></div>
+  </div>
+
+  <div class="gen-checklist" id="gen-checklist">
+    <div class="gc-item" id="gc-name"><span class="gc-dot"></span>Associate name entered</div>
+    <div class="gc-item" id="gc-team"><span class="gc-dot"></span>Project team selected</div>
+    <div class="gc-item" id="gc-month"><span class="gc-dot"></span>Month and year set</div>
+    <div class="gc-item" id="gc-leave"><span class="gc-dot"></span>Leave days <span style="opacity:.55;font-size:.7rem;">— optional</span></div>
+    <div class="gc-item" id="gc-adhoc"><span class="gc-dot"></span>Adhoc efforts <span style="opacity:.55;font-size:.7rem;">— optional</span></div>
+  </div>
+  <button class="gen-btn" id="card-generate" onclick="generate()">Generate Timesheet &rarr;</button>
+  <div style="font-size:.68rem;font-family:'DM Mono',monospace;color:var(--dim);text-align:center;margin-top:10px;">One Excel row per effort type per working day &middot; Weekends skipped automatically &middot; No data leaves your browser</div>
+</div>
+
+<!-- OUTPUT -->
+<div id="out">
+  <div class="sep"></div>
+  <div class="out-hdr">
+    <h2>Generated <span>Timesheet</span></h2>
+    <div class="btn-group">
+      <button class="dl-btn sec" onclick="copyMD()">Copy Summary</button>
+      <button class="dl-btn" id="dl-btn" onclick="downloadXLSX()">Download .xlsx</button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="tbl-card">
+    <div class="tbl-hdr">
+      <span id="tbl-count">0 rows</span>
+      <input class="tbl-search" placeholder="Filter rows..." oninput="filterTbl(this.value)">
+    </div>
+    <div class="tbl-wrap">
+      <table class="prev">
+        <thead><tr>
+          <th>LOB Vertical</th><th>Project Team</th><th>Effort Type</th>
+          <th>Associate Name</th><th>Date</th><th>Effort Details</th>
+          <th class="r">Time Spent (Mins)</th><th>Ticket Type</th><th>Ticket #</th>
+          <th>SLA Met</th><th>Job Accuracy</th><th>Comments</th>
+        </tr></thead>
+        <tbody id="prev-body"></tbody>
+      </table>
+    </div>
+    <div class="tbl-ftr">
+      <span id="tbl-showing"></span>
+      <span id="tbl-tot"></span>
+    </div>
+  </div>
+  <div id="warn-notes" class="warn-box"></div>
+</div>
+
+
+<!-- How to Use Modal -->
+<div class="modal-overlay" id="guide-modal" onclick="if(event.target===this)closeGuide()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>&#x1F4CB; How to Use — <span>Timesheet Generator</span></h2>
+      <button class="modal-close" onclick="closeGuide()" title="Close">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- What it does -->
+      <div style="background:rgba(62,207,106,.06);border:1px solid rgba(62,207,106,.2);border-radius:var(--r2);padding:14px 16px;margin-bottom:22px;">
+        <div style="color:var(--acc);font-weight:700;font-size:.85rem;margin-bottom:6px;">&#x26A1; What does this tool do?</div>
+        <div style="font-size:.82rem;color:var(--txt2);line-height:1.75;">
+          It builds your <strong style="color:var(--txt)">monthly timesheet Excel file automatically</strong>. You fill in your details once, click Generate, and download a ready-to-submit <code style="background:var(--sur3);padding:1px 6px;border-radius:4px;font-size:.78rem;">.xlsx</code> file. No manual row-by-row entry needed.
+        </div>
+        <div style="margin-top:10px;font-size:.76rem;color:var(--mut);">All 12 columns are filled automatically: LOB Vertical &middot; Project Team &middot; Effort Type &middot; Associate Name &middot; Date &middot; Effort Details &middot; Time Spent &middot; Ticket Type &middot; Ticket No. &middot; SLA Met &middot; Job Accuracy &middot; Comments</div>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div class="guide-content">
+          <h3>Fill in Basic Info</h3>
+          <p>This is the only required section. Fill in 5 fields:</p>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="color:var(--acc);font-weight:700;font-size:.8rem;flex-shrink:0;padding-top:1px;">&#x25B6;</span>
+              <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;"><strong>LOB Vertical</strong> — Your line of business. Pick from the list (SMT, SDLT, etc.) or choose "Other" to type your own.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="color:var(--acc);font-weight:700;font-size:.8rem;flex-shrink:0;padding-top:1px;">&#x25B6;</span>
+              <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;"><strong>Associate Name</strong> — Your full name exactly as it should appear in the timesheet (e.g. <em>John Smith</em>).</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="color:var(--acc);font-weight:700;font-size:.8rem;flex-shrink:0;padding-top:1px;">&#x25B6;</span>
+              <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;"><strong>Project Team</strong> — Select your team. Named teams (SMT-Quality Management, SMT-ITSMRemedy, SMT-TMS) <strong>auto-load the correct daily pattern</strong> for you. Pick "Other" to type a custom team name and build your own pattern.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="color:var(--acc);font-weight:700;font-size:.8rem;flex-shrink:0;padding-top:1px;">&#x25B6;</span>
+              <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;"><strong>Activity / Efforts</strong> — The release or project label (e.g. <em>ServiceNow Release 25.3</em>). Leave blank → shows as "General Activities". Not needed if using Work Phases.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="color:var(--acc);font-weight:700;font-size:.8rem;flex-shrink:0;padding-top:1px;">&#x25B6;</span>
+              <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;"><strong>Month &amp; Year</strong> — The month you are filing for. The tool generates rows for every Monday–Friday in that month. Weekends are skipped automatically.</div>
+            </div>
+          </div>
+          <div class="guide-tip"><b>&#x26A0; Important:</b> Set <strong>Month &amp; Year first</strong>, before adding leave or adhoc entries. Changing them later will clear those entries.</div>
+        </div>
+      </div>
+
+      <!-- Step 1b -->
+      <div class="guide-step">
+        <div class="guide-num">1b</div>
+        <div class="guide-content">
+          <h3>Work Phases <span style="font-size:.72rem;color:var(--mut);font-weight:400;">(Optional)</span></h3>
+          <p>Only needed if you worked on <strong>different releases or activities in the same month</strong>. For example: Release 25.1 for the first two weeks, then Release 25.2 for the rest of the month.</p>
+          <p style="margin-top:8px;"><strong>How to add a phase:</strong></p>
+          <ol style="font-size:.8rem;color:var(--txt2);line-height:1.9;padding-left:18px;margin-top:4px;">
+            <li>Toggle on <em>"I worked on multiple releases"</em></li>
+            <li>Click <strong>+ Add Phase</strong></li>
+            <li>Pick a From date and To date from the calendar</li>
+            <li>Type the release / activity label for that date range</li>
+            <li>Click <strong>Save</strong> — the next phase auto-starts from the next workday</li>
+          </ol>
+          <div class="guide-tip"><b>Tip:</b> You can have up to 4 phases. Days not covered by any phase fall back to the default Activity label you set in Basic Info.</div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div class="guide-content">
+          <h3>Daily Patterns</h3>
+          <p>A <strong>pattern</strong> is the set of rows that repeat every working day (e.g. Meetings 60 min, Development 360 min). For named teams, the correct pattern is <strong>loaded automatically</strong> — most people don't need to change anything here.</p>
+          <p style="margin-top:8px;color:var(--mut);font-size:.78rem;">Default patterns per team:</p>
+          <div style="margin-top:6px;font-size:.76rem;font-family:'DM Mono',monospace;display:flex;flex-direction:column;gap:4px;">
+            <div style="color:var(--txt2);"><span style="color:var(--txt);font-weight:600;">SMT-Quality Management:</span> Release status call (60m) + Daily Standup (60m) + Main task (360m ADJ)</div>
+            <div style="color:var(--txt2);"><span style="color:var(--txt);font-weight:600;">SMT-ITSMRemedy:</span> Daily Standup (60m) + Team Meeting (60m) + Main task (360m ADJ)</div>
+            <div style="color:var(--txt2);"><span style="color:var(--txt);font-weight:600;">SMT-TMS:</span> Dev Meeting (30m) + Staff Meeting (30m) + Misc (60m) + Main task (360m ADJ)</div>
+          </div>
+          <p style="margin-top:10px;">To customise: toggle on <em>"Use custom patterns"</em>. Each row needs an <strong>Effort Type</strong>, <strong>Effort Details</strong>, <strong>Minutes</strong>, and type:</p>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;font-size:.75rem;">
+            <span style="background:rgba(62,207,106,.1);border:1px solid rgba(62,207,106,.3);border-radius:5px;padding:4px 10px;color:var(--acc3);"><strong>FIXED</strong> — same minutes every day</span>
+            <span style="background:rgba(240,168,50,.1);border:1px solid rgba(240,168,50,.3);border-radius:5px;padding:4px 10px;color:var(--ylw);"><strong>ADJ</strong> — fills the remaining time to reach 480m (exactly one required)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div class="guide-content">
+          <h3>Leave Days <span style="font-size:.72rem;color:var(--mut);font-weight:400;">(Optional)</span></h3>
+          <p>Toggle on if you had any days off. Leave days <strong>replace the full day's pattern</strong> with a single 480-minute row.</p>
+          <p style="margin-top:8px;"><strong>How to add leave:</strong></p>
+          <ol style="font-size:.8rem;color:var(--txt2);line-height:1.9;padding-left:18px;margin-top:4px;">
+            <li>Toggle on <em>"I had leave days this month"</em></li>
+            <li>Click the date box — a calendar opens showing only your selected month</li>
+            <li>Click one or more dates (weekends are greyed out)</li>
+            <li>Choose the Leave Type from the dropdown</li>
+            <li>Click <strong>+ Add Leaves</strong> — dates appear as coloured chips</li>
+            <li>Click &#x2715; on any chip to remove that date</li>
+          </ol>
+          <div style="margin-top:10px;font-size:.76rem;font-family:'DM Mono',monospace;display:flex;flex-direction:column;gap:4px;">
+            <div><span style="color:var(--red);">Sick / Planned / Comp Off</span> <span style="color:var(--mut);">→ Effort Type: Other - Time Off</span></div>
+            <div><span style="color:var(--acc);">Public Holiday</span> <span style="color:var(--mut);">→ Effort Type: Other - Public Holiday</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="guide-step">
+        <div class="guide-num">4</div>
+        <div class="guide-content">
+          <h3>Adhoc Efforts <span style="font-size:.72rem;color:var(--mut);font-weight:400;">(Optional)</span></h3>
+          <p>For <strong>one-off extra work on a specific day</strong> — e.g. a training session, special call, or unplanned task — on top of your normal pattern.</p>
+          <p style="margin-top:8px;"><strong>How to add an adhoc entry:</strong></p>
+          <ol style="font-size:.8rem;color:var(--txt2);line-height:1.9;padding-left:18px;margin-top:4px;">
+            <li>Toggle on <em>"I have extra efforts on specific days"</em></li>
+            <li>Click <strong>+ Add Adhoc Entry</strong> — a row opens</li>
+            <li>Pick a date (leave days are greyed out)</li>
+            <li>Select Effort Type, enter Effort Details, set Minutes</li>
+            <li>Click <strong>Save</strong> to confirm</li>
+          </ol>
+          <div class="guide-tip"><b>How it works:</b> Adhoc minutes are <strong>deducted from the ADJ row</strong> for that day, so the day still totals 480 minutes. For example, if you add 60m of adhoc training, the ADJ row reduces by 60m.</div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div class="guide-content">
+          <h3>Generate &amp; Download</h3>
+          <p>When ready, click <strong>Generate Timesheet</strong>. The tool validates everything and shows a live preview. Then click <strong>Download .xlsx</strong>.</p>
+          <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem;">
+            <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;">
+              <div style="color:var(--acc);font-weight:700;margin-bottom:4px;">&#x2B07; Download .xlsx</div>
+              <div style="color:var(--txt2);line-height:1.6;">Green header &middot; All 12 columns &middot; Auto-filter &middot; Freeze pane &middot; Ready to submit</div>
+            </div>
+            <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;">
+              <div style="color:var(--txt2);font-weight:700;margin-bottom:4px;">&#x1F4CB; Copy Summary</div>
+              <div style="color:var(--txt2);line-height:1.6;">Copies a markdown summary with hours &amp; breakdown — paste into Teams or Slack</div>
+            </div>
+          </div>
+          <div class="guide-tip"><b>&#x1F512; Privacy:</b> Everything runs 100% in your browser. No data is sent anywhere. Works offline too once loaded.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+const MONTHS=["","January","February","March","April","May","June","July","August","September","October","November","December"];
+let lvId=0,ahId=0,ptId=0,genRows=[],genMeta={};
+
+/* ── Scroll to card ── */
+/* call on init */
+window.addEventListener('DOMContentLoaded',()=>{
+  updateReleasePlaceholder();
+  onTeamChange();
+  _syncRow1b();
+  const row1b=document.getElementById('basic-row1b');
+  if(row1b) row1b.style.display='none';
+  updateGenSummary();
+});
+
+function scrollToCard(id){
+  const el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* togglePopover removed - using always-visible hints */
+
+/* ── Highlight active step on scroll ── */
+function getCardStepMap(){
+  return [
+    {id:'card-basic',   step:'s1'},
+    {id:'card-patterns',step:'s2'},
+    {id:'card-leave',   step:'s3'},
+    {id:'card-adhoc',   step:'s4'},
+    {id:'card-generate',step:'s5'},
+  ];
+}
+function highlightActiveStep(){
+  const map=getCardStepMap();
+  let active='s1';
+  for(const {id,step} of map){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    const rect=el.getBoundingClientRect();
+    if(rect.top<=160) active=step;
+  }
+  map.forEach(({step})=>{
+    const s=document.getElementById(step);
+    if(!s) return;
+    if(s.classList.contains('done')) return;
+    s.classList.toggle('active', step===active);
+  });
+}
+window.addEventListener('scroll', highlightActiveStep, {passive:true});
+
+/* ── Year dropdown init ── */
+(function(){
+  const curYear=new Date().getFullYear();
+  const wrap=document.getElementById('year-wrap');
+  if(!wrap) return;
+  let selOpts='';
+  for(let y=curYear-1;y<=curYear+5;y++){
+    selOpts+=`<option value="${y}"${y===curYear?' selected':''}>${y}</option>`;
+  }
+  wrap.innerHTML=`
+    <select id="f-year-sel" onchange="onYearDDO(this.value)">
+      <option value="">-- Year --</option>
+      ${selOpts}
+      <option value="__other__">Other -- type manually</option>
+    </select>
+    <input type="number" id="f-year" class="dd-other" placeholder="e.g. 2026" min="2020" max="2099"
+      oninput="onMonthYearChange()" value="${curYear}">`;
+  // set default value
+  document.getElementById('f-year').value=curYear;
+  // trigger sel to match
+  document.getElementById('f-year-sel').value=curYear;
+})();
+
+function onYearDDO(val){
+  const inp=document.getElementById('f-year');
+  const sel=document.getElementById('f-year-sel');
+  if(val==='__other__'){
+    inp.classList.add('show');
+    inp.value='';
+    inp.focus();
+  } else {
+    inp.classList.remove('show');
+    inp.value=val;
+  }
+  onMonthYearChange();
+}
+
+/* ── Steps ── */
+function updateSteps(){
+  const tv=document.getElementById('f-team').value;
+  const teamOk=tv&&(tv!=='Other'||document.getElementById('f-team-other').value.trim());
+  const nameOk=!!document.getElementById('f-name').value.trim();
+  const ok=nameOk&&teamOk;
+  const monthOk=!!document.getElementById('f-month').value;
+  const yearOk=!!document.getElementById('f-year').value;
+  const full=ok&&monthOk&&yearOk;
+  document.getElementById('s1').className='step '+(ok?'done':'active');
+  document.getElementById('s5').className='step '+(full?'active':'');
+  /* Live checklist */
+  _setGC('gc-name', nameOk);
+  _setGC('gc-team', !!teamOk);
+  _setGC('gc-month', monthOk&&yearOk);
+  /* leave: green ONLY if at least one leave date has been added */
+  _setGC('gc-leave', Object.keys(lvSelectedDates).length>0);
+  /* adhoc: green ONLY if at least one adhoc entry has been saved */
+  var ahList=document.getElementById('ah-list');
+  var savedAh=ahList?[].slice.call(ahList.children).filter(function(r){return !r.classList.contains('editing');}).length:0;
+  _setGC('gc-adhoc', savedAh>0);
+  updateGenSummary();
+}
+function _setGC(id, ok){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.toggle('ok', ok);
+  el.classList.toggle('pending', !ok);
+  const dot=el.querySelector('.gc-dot');
+  if(dot){dot.style.background=ok?'var(--acc)':'var(--bdr2)';}
+}
+
+/* ── Pre-generate summary panel ── */
+function updateGenSummary(){
+  const name=document.getElementById('f-name').value.trim();
+  const teamSel=document.getElementById('f-team').value;
+  const teamOther=document.getElementById('f-team-other').value.trim();
+  const team=teamSel==='Other'?teamOther:teamSel;
+  const lobSel=document.getElementById('f-lob').value;
+  const lobOther=(document.getElementById('f-lob-other')||{}).value||'';
+  const lob=lobSel==='Other'?lobOther:lobSel;
+  const mon=document.getElementById('f-month');
+  const monLabel=mon.options[mon.selectedIndex]&&mon.value?mon.options[mon.selectedIndex].text:'—';
+  const yr=document.getElementById('f-year').value||'—';
+  const release=document.getElementById('f-release').value.trim()||'General Activities';
+  const leaveOn=document.getElementById('tog-leave').checked;
+  const leaveCnt=Object.keys(lvSelectedDates).length;
+  const adhocOn=document.getElementById('tog-adhoc').checked;
+  const adhocCnt=document.getElementById('ah-list')?document.getElementById('ah-list').children.length:0;
+
+  const rows=document.getElementById('pre-gen-rows');
+  if(!rows)return;
+
+  function row(label,val,ok){
+    const color=ok?'var(--acc3)':'var(--mut)';
+    const valColor=ok?'var(--txt)':'var(--dim)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bdr);">'+
+      '<span style="color:var(--mut);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;">'+label+'</span>'+
+      '<span style="color:'+valColor+';font-weight:600;font-size:.78rem;">'+val+'</span></div>';
+  }
+
+  rows.innerHTML=
+    row('Name', name||'Not entered', !!name)+
+    row('LOB', lob||'SMT', true)+
+    row('Team', team||'Not selected', !!team)+
+    row('Month', monLabel+' '+yr, !!(mon.value&&yr&&yr!=='—'))+
+    row('Activity', release, true)+
+    (leaveOn?row('Leave Days', leaveCnt+' day'+(leaveCnt!==1?'s':''), leaveCnt>0):'') +
+    (adhocOn?row('Adhoc Entries', adhocCnt+' entr'+(adhocCnt!==1?'ies':'y'), adhocCnt>0):'');
+
+  // Pattern preview
+  const genPat=document.getElementById('gen-pat-preview');
+  const genPatRows=document.getElementById('gen-pat-rows');
+  const custOn=document.getElementById('tog-cust').checked;
+  const pats=custOn?getCustomPats():defPats;
+
+  if(pats&&pats.length&&genPat&&genPatRows){
+    genPat.style.display='block';
+    genPatRows.innerHTML=pats.map(function(p){
+      const adjBadge=p.adj?'<span style="font-size:.58rem;background:rgba(240,168,50,.12);color:var(--ylw);border:1px solid rgba(240,168,50,.3);border-radius:3px;padding:1px 5px;margin-left:4px;">ADJ</span>':'<span style="font-size:.58rem;background:rgba(62,207,106,.1);color:var(--acc3);border:1px solid rgba(62,207,106,.25);border-radius:3px;padding:1px 5px;margin-left:4px;">FIXED</span>';
+      const det=p.det==='[RELEASE]'?'<em style="color:var(--acc);font-style:normal;">[activity label]</em>':('<span style="color:var(--txt2);">'+esc(p.det)+'</span>');
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:.75rem;">'+
+        '<span style="flex:2;color:var(--txt);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(p.et)+adjBadge+'</span>'+
+        '<span style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+det+'</span>'+
+        '<span style="flex-shrink:0;color:var(--acc);font-weight:700;min-width:40px;text-align:right;">'+p.mins+'m</span>'+
+        '</div>';
+    }).join('');
+    // Remove border from last row
+    const lastRow=genPatRows.querySelector('div:last-child');
+    if(lastRow)lastRow.style.borderBottom='none';
+  } else if(genPat){
+    genPat.style.display='none';
+  }
+}
+
+function getCustomPats(){
+  const rows=document.getElementById('pt-body').children;
+  const result=[];
+  for(const row of rows){
+    if(row.dataset.et){
+      result.push({et:row.dataset.et,det:row.dataset.det,mins:parseInt(row.dataset.mn)||0,adj:row.dataset.adj==='adj'});
+    }
+  }
+  return result;
+}
+
+/* ── Toggle ── */
+function togClick(chkId,secId,rowId){
+  const c=document.getElementById(chkId);c.checked=!c.checked;togChange(secId,rowId,c.checked);
+}
+function togChange(secId,rowId,on){
+  if(secId==='ah-sec'&&on&&!hasAdjPattern()){
+    showToast('Add one Adjustable row in Custom Patterns before enabling Adhoc Efforts.');
+    // revert the checkbox
+    document.getElementById('tog-adhoc').checked=false;
+    return;
+  }
+  document.getElementById(secId).style.display=on?'block':'none';
+  document.getElementById(rowId).classList.toggle('active',on);
+  if(secId==='lv-sec'&&on) setTimeout(initLvCal,50);
+  updateSteps();
+}
+
+/* ── Save Adhoc row ── */
+function renderAdhocView(id,ds,et,det,mn){
+  const d=document.getElementById('ah-'+id);
+  d.classList.remove('editing');
+  d.dataset.ds=ds;d.dataset.et=et;d.dataset.det=det;d.dataset.mn=mn;
+  const cellStyle='font-family:DM Mono,monospace;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+  const c=document.createElement('span');c.style=cellStyle+'color:var(--txt2)';c.textContent=ds;
+  const e=document.createElement('span');e.style=cellStyle+'color:var(--txt);font-weight:500';e.title=et;e.textContent=et;
+  const t=document.createElement('span');t.style=cellStyle+'color:var(--txt2)';t.title=det;t.textContent=det;
+  const m=document.createElement('span');m.style=cellStyle+'color:var(--acc);font-weight:700';m.textContent=mn+'m';
+  const editBtn=document.createElement('button');editBtn.className='btn-edit';editBtn.textContent='Edit';editBtn.title='Edit';editBtn.onclick=()=>editAdhoc(id);
+  const delBtn=document.createElement('button');delBtn.className='btn-del';delBtn.title='Delete';delBtn.innerHTML='✕';delBtn.onclick=()=>{d.remove();updatePatCounter();updateSteps();};
+  const btns=document.createElement('div');btns.style='display:flex;gap:4px';btns.appendChild(editBtn);btns.appendChild(delBtn);
+  d.innerHTML='';d.appendChild(c);d.appendChild(e);d.appendChild(t);d.appendChild(m);d.appendChild(btns);
+}
+
+function saveAdhoc(id){
+  const ds=document.getElementById('ahd-'+id).value;
+  const et=getDDOVal('ahe-sel-'+id,'ahe-'+id);
+  const det=getDDOVal('ahdet-sel-'+id,'ahdet-'+id);
+  const mn=parseInt(getDDOVal('ahm-sel-'+id,'ahm-'+id));
+  if(!ds){showToast('Please pick a date.');return;}
+  if(lvSelectedDates[ds]){
+    showToast(ds+' is a leave day. Adhoc work cannot be logged on a leave day.');return;
+  }
+  if(!et){showToast('Please select or enter an Effort Type.');return;}
+  if(!det){showToast('Please select or enter Effort Details.');return;}
+  if(!mn||mn<1||mn>480){showToast('Please enter valid Mins (1-480).');return;}
+  renderAdhocView(id,ds,et,det,mn);
+  updateSteps();
+}
+
+function editAdhoc(id){
+  const d=document.getElementById('ah-'+id);
+  const ds=d.dataset.ds||'';
+  const et=d.dataset.et||'';
+  const det=d.dataset.det||'';
+  const mn=d.dataset.mn||'';
+  d.classList.add('editing');
+  d.innerHTML=`<input type="text" id="ahd-${id}" value="${ds}" placeholder="Pick a date" readonly style="cursor:pointer">${makeDDO('ahe-sel-'+id,'ahe-'+id,ET_OPTS,et,'Effort Type')}${makeDDO('ahdet-sel-'+id,'ahdet-'+id,DET_OPTS,det,'Effort Details')}${makeAdhocMinsDDO('ahm-sel-'+id,'ahm-'+id,mn)}`;
+  const saveBtn=document.createElement('button');saveBtn.className='btn-save';saveBtn.textContent='Save';saveBtn.onclick=()=>saveAdhoc(id);
+  const cancelBtn=document.createElement('button');cancelBtn.className='btn-rm';cancelBtn.textContent='X';cancelBtn.onclick=()=>editAdhocCancel(id);
+  const btns=document.createElement('div');btns.style='display:flex;gap:4px;padding-top:2px';btns.appendChild(saveBtn);btns.appendChild(cancelBtn);
+  d.appendChild(btns);
+  const editAhCalCfg=Object.assign({dateFormat:'Y-m-d',disableMobile:true,allowInput:false,defaultDate:ds||undefined},getCalConfig());
+  // If editing an existing entry, keep its date; otherwise don't pre-fill
+  if(!ds) delete editAhCalCfg.defaultDate;
+  editAhCalCfg.disable=(editAhCalCfg.disable||[]).concat([function(date){
+    const k=flatpickr.formatDate(date,'Y-m-d');
+    return !!lvSelectedDates[k];
+  }]);
+  flatpickr('#ahd-'+id,editAhCalCfg);
+}
+
+function editAdhocCancel(id){
+  const d=document.getElementById('ah-'+id);
+  if(!d.dataset.ds){d.remove();return;}
+  renderAdhocView(id,d.dataset.ds,d.dataset.et,d.dataset.det,d.dataset.mn);
+}
+
+/* ── Month/Year change ── */
+function onMonthYearChange(){
+  // re-init leave cal to reflect new month restriction or unlock
+  if(document.getElementById('tog-leave').checked) setTimeout(initLvCal,30);
+  const ahList=document.getElementById('ah-list');
+  const hadLeave=Object.keys(lvSelectedDates).length>0;
+  const hadAdhoc=ahList&&ahList.children.length>0;
+  /* Reset leave state */
+  lvSelectedDates={};
+  if(lvFp){lvFp.destroy();lvFp=null;}
+  const lvGroups=document.getElementById('lv-groups');
+  if(lvGroups)lvGroups.innerHTML='';
+  const lvCount=document.getElementById('lv-count');
+  if(lvCount)lvCount.textContent='';
+  const lvCalInput=document.getElementById('lv-cal-input');
+  if(lvCalInput)lvCalInput.value='';
+  /* Reset adhoc */
+  if(ahList)ahList.innerHTML='';
+  /* Reset phases dates */
+  const phasesList=document.getElementById('phases-list');
+  if(phasesList)phasesList.innerHTML='';
+  /* Clear phase data store and flatpickr instances */
+  for(const id in phaseData)delete phaseData[id];
+  for(const id in phaseFpFrom){phaseFpFrom[id].destroy&&phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  for(const id in phaseFpTo){phaseFpTo[id].destroy&&phaseFpTo[id].destroy();delete phaseFpTo[id];}
+  phaseId=0;
+  if(document.getElementById('tog-phases')?.checked){
+    setTimeout(()=>{addPhase();addPhase();},10);
+  }
+  if(hadLeave||hadAdhoc) showToast('Month changed — leave & adhoc dates cleared.');
+  updateSteps();
+  updateGenSummary();
+}
+
+/* ── Pattern Warning Modal ── */
+let _pendingGenerateArgs=null;
+function showPatWarningModal(patTotal,adjEt,adjWillBe,ctx){
+  _pendingGenerateArgs=ctx;
+  const remaining=480-patTotal;
+  document.getElementById('pat-warn-body').innerHTML=
+    `<div style="color:var(--acc);font-weight:700;font-size:.9rem;margin-bottom:12px;">Your patterns total <span style="color:#f0a832">${patTotal}m</span> out of 480m</div>`+
+    `<div style="margin-bottom:8px;">&#8226; <strong style="color:var(--txt);">Remaining: ${remaining}m</strong> will be auto-filled into the <span style="color:var(--acc)">${adjEt}</span> row</div>`+
+    `<div style="margin-bottom:8px;">&#8226; The adjustable row will be set to <strong style="color:var(--acc);">${adjWillBe}m</strong> per day instead</div>`+
+    `<div style="margin-top:12px;padding:10px 12px;background:rgba(240,168,50,.08);border:1px solid rgba(240,168,50,.25);border-radius:6px;color:#f0a832;font-size:.76rem;">Click <strong>Go Back &amp; Fix</strong> to update your pattern rows, or <strong>Continue Anyway</strong> to generate with the auto-adjusted values.</div>`;
+  document.getElementById('pat-warn-modal').classList.add('open');
+}
+function closePatWarnModal(){
+  document.getElementById('pat-warn-modal').classList.remove('open');
+  _pendingGenerateArgs=null;
+}
+function proceedGenerate(){
+  document.getElementById('pat-warn-modal').classList.remove('open');
+  if(_pendingGenerateArgs) continueGenerate(_pendingGenerateArgs);
+}
+
+/* ── Toast ── */
+function showToast(msg,type){
+  let t=document.getElementById('toast-msg');
+  if(!t){
+    t=document.createElement('div');
+    t.id='toast-msg';
+    document.body.appendChild(t);
+  }
+  const isSuccess=type==='success';
+  t.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);'+(isSuccess?'background:rgba(12,36,18,.97);border:1px solid rgba(62,207,106,.5);color:#3ecf6a;':'background:#1e2330;border:1px solid rgba(240,168,50,.4);color:#f0a832;')+'font-family:DM Mono,monospace;font-size:.78rem;padding:10px 22px;border-radius:8px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+  if(!t.parentNode) document.body.appendChild(t);
+  t.innerHTML=msg;
+  t.style.opacity='1';
+  t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},3000);
+}
+
+/* ── Calendar month restriction ── */
+function getCalConfig(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  if(mon&&yr){
+    const y=parseInt(yr),m=parseInt(mon)-1;
+    const firstDay=new Date(y,m,1);
+    const lastDay=new Date(y,m+1,0);
+    const lockNav=function(selectedDates,dateStr,fp){
+      if(fp.currentMonth!==m||fp.currentYear!==y){
+        fp.jumpToDate(firstDay,false);
+      }
+    };
+    return {
+      minDate:firstDay,
+      maxDate:lastDay,
+      onMonthChange:lockNav,
+      onYearChange:lockNav,
+    };
+  }
+  return {};
+}
+
+/* ── Leave ── */
+let lvSelectedDates={};/* key=YYYY-MM-DD, val=leaveType */
+let lvFp=null;
+
+const LV_TYPE_META={
+  'Sick Leave':    {color:'#f05656',dim:'rgba(240,86,86,0.10)',border:'rgba(240,86,86,0.3)',icon:''},
+  'Planned Leave': {color:'#5b8af0',dim:'rgba(91,138,240,0.10)',border:'rgba(91,138,240,0.3)',icon:''},
+  'Comp Off':      {color:'#f0a832',dim:'rgba(240,168,50,0.10)',border:'rgba(240,168,50,0.3)',icon:''},
+  'Holiday':       {color:'#3ecf6a',dim:'rgba(62,207,106,0.10)',border:'rgba(62,207,106,0.3)',icon:''},
+};
+
+function initLvCal(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  const inp=document.getElementById('lv-cal-input');
+  if(!mon||!yr){
+    if(lvFp){lvFp.destroy();lvFp=null;}
+    inp.placeholder='Select Month & Year in Basic Info first';
+    inp.disabled=true;
+    inp.style.opacity='.45';
+    inp.style.cursor='not-allowed';
+    document.getElementById('lv-type').disabled=true;
+    document.getElementById('lv-type').style.opacity='.45';
+    return;
+  }
+  inp.placeholder='Click to pick dates';
+  inp.disabled=false;
+  inp.style.opacity='';
+  inp.style.cursor='pointer';
+  document.getElementById('lv-type').disabled=false;
+  document.getElementById('lv-type').style.opacity='';
+  if(lvFp) lvFp.destroy();
+  const cal=getCalConfig();
+  lvFp=flatpickr('#lv-cal-input',Object.assign({},cal,{
+    mode:'multiple',
+    dateFormat:'Y-m-d',
+    disableMobile:true,
+    allowInput:false,
+    disable:[function(date){return date.getDay()===0||date.getDay()===6;}],
+  }));
+}
+
+function addLvEntry(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  if(!mon||!yr){showToast('Please select a Month and Year in Basic Info first.');return;}
+  const fp=lvFp;
+  if(!fp||!fp.selectedDates.length){showToast('Please pick at least one date first.');return;}
+  const tp=document.getElementById('lv-type').value;
+  let added=0,skipped=0;
+  fp.selectedDates.forEach(function(d){
+    const ds=flatpickr.formatDate(d,'Y-m-d');
+    if(lvSelectedDates[ds]){skipped++;return;}
+    lvSelectedDates[ds]=tp;
+    added++;
+  });
+  fp.clear();
+  renderLvGroups();
+  updateSteps();
+  const total=Object.keys(lvSelectedDates).length;
+  if(skipped>0&&added===0){
+    showToast('Those dates are already added.');
+  } else if(added>0){
+    const msg=added===1
+      ? `✓ 1 leave date confirmed (${total} total)`
+      : `✓ ${added} leave dates confirmed (${total} total)`;
+    showToast(msg,'success');
+    if(skipped>0) setTimeout(()=>showToast(skipped+' duplicate(s) skipped.'),1600);
+  }
+}
+
+function removeLvDate(ds){
+  delete lvSelectedDates[ds];
+  renderLvGroups();
+  updateSteps();
+}
+
+function renderLvGroups(){
+  const container=document.getElementById('lv-groups');
+  const count=document.getElementById('lv-count');
+  container.innerHTML='';
+  const byType={};
+  Object.keys(lvSelectedDates).sort().forEach(ds=>{
+    const tp=lvSelectedDates[ds];
+    if(!byType[tp])byType[tp]=[];
+    byType[tp].push(ds);
+  });
+  const typeOrder=['Sick Leave','Planned Leave','Comp Off','Holiday'];
+  const usedTypes=typeOrder.filter(t=>byType[t]);
+  if(!usedTypes.length){count.textContent='';return;}
+  usedTypes.forEach(tp=>{
+    const meta=LV_TYPE_META[tp]||{color:'var(--acc)',dim:'var(--adim)',border:'var(--bdr2)',icon:''};
+    const dates=byType[tp];
+    const grp=document.createElement('div');
+    grp.style.cssText=`background:${meta.dim};border:1px solid ${meta.border};border-radius:var(--r2);padding:10px 14px;`;
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;`;
+    hdr.innerHTML=`<span style="display:flex;align-items:center;gap:8px;font-size:.68rem;font-family:'DM Mono',monospace;font-weight:700;color:${meta.color};letter-spacing:.1em;text-transform:uppercase;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${meta.color};flex-shrink:0;"></span>${tp} <span style="font-weight:400;opacity:.6;">(${dates.length} day${dates.length>1?'s':''})</span></span>`;
+    grp.appendChild(hdr);
+    const chips=document.createElement('div');
+    chips.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+    dates.forEach(ds=>{
+      const chip=document.createElement('div');
+      chip.className='lv-chip';
+      chip.style.cssText=`border-color:${meta.border};background:rgba(0,0,0,0.2);`;
+      chip.innerHTML=`<span class="chip-date" style="color:${meta.color};">${ds}</span><button class="chip-rm" onclick="removeLvDate('${ds}')" title="Remove">×</button>`;
+      chips.appendChild(chip);
+    });
+    grp.appendChild(chips);
+    container.appendChild(grp);
+  });
+  const total=Object.keys(lvSelectedDates).length;
+  if(total){
+    count.style.display='block';
+    const typeBreakdown=usedTypes.map(t=>{
+      const meta=LV_TYPE_META[t];
+      return `<span style="color:${meta.color};font-weight:600;">${byType[t].length}</span> ${t}`;
+    }).join('<span style="color:var(--dim);"> &nbsp;·&nbsp; </span>');
+    count.innerHTML=`<span style="color:var(--mut);font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:.65rem;">Total Leave &nbsp;</span><span style="color:var(--acc);font-weight:700;font-size:.85rem;">${total} day${total>1?'s':''}</span><span style="color:var(--dim)"> &nbsp;—&nbsp; </span>${typeBreakdown}`;
+  } else {
+    count.style.display='none';
+    count.innerHTML='';
+  }
+}
+
+function renderLvChips(){renderLvGroups();}
+
+/* ── Adhoc ── */
+function hasAdjPattern(){
+  const custOn=document.getElementById('tog-cust')&&document.getElementById('tog-cust').checked;
+  if(!custOn) return true; // default patterns always have ADJ
+  const rows=document.getElementById('pt-body').children;
+  for(const r of rows){if(r.dataset.adj==='adj') return true;}
+  return false;
+}
+
+function addAdhoc(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  if(!mon||!yr){showToast('Please select a Month and Year in Basic Info first.');return;}
+  if(!hasAdjPattern()){showToast('Add one Adjustable row in Custom Patterns before adding Adhoc Efforts.');return;}
+  const id=++ahId,d=document.createElement('div');
+  d.className='dyn-row ah-row';d.id='ah-'+id;
+  d.classList.add('editing');
+  d.innerHTML=`<input type="text" id="ahd-${id}" placeholder="Pick a date" readonly style="cursor:pointer">${makeDDO('ahe-sel-'+id,'ahe-'+id,ET_OPTS,'','Effort Type')}${makeDDO('ahdet-sel-'+id,'ahdet-'+id,DET_OPTS,'','Effort Details')}${makeAdhocMinsDDO('ahm-sel-'+id,'ahm-'+id,'')}<div style="display:flex;gap:4px;padding-top:2px"><button class="btn-save" onclick="saveAdhoc(${id})" title="Save">Save</button><button class="btn-rm" onclick="document.getElementById('ah-${id}').remove()" title="Cancel">×</button></div>`;
+  document.getElementById('ah-list').appendChild(d);
+  const ahCalCfg=Object.assign({dateFormat:'Y-m-d',disableMobile:true,allowInput:false},getCalConfig());
+  // Clear defaultDate so adhoc date starts blank (not pre-filled with month's first day)
+  delete ahCalCfg.defaultDate;
+  // Disable weekends AND leave days in adhoc calendar
+  ahCalCfg.disable=[
+    function(date){return date.getDay()===0||date.getDay()===6;},
+    function(date){return !!lvSelectedDates[flatpickr.formatDate(date,'Y-m-d')];}
+  ];
+  flatpickr('#ahd-'+id,ahCalCfg);
+  const monOk=document.getElementById('f-month').value&&document.getElementById('f-year').value;
+  if(monOk) document.getElementById('ahd-'+id).click();
+}
+
+/* ── Custom Patterns ── */
+function custChange(){
+  const on=document.getElementById('tog-cust').checked;
+  document.getElementById('def-pat').style.display=on?'none':'block';
+  if(on&&!document.getElementById('pt-body').children.length)addPat();
+}
+function updatePatCounter(){
+  const rows=document.getElementById('pt-body').children;
+  if(!rows.length){document.getElementById('pt-counter').style.display='none';return;}
+  let total=0;
+  for(const row of rows){
+    const mn=parseInt(row.dataset.mn||0);
+    if(!isNaN(mn)) total+=mn;
+  }
+  const rem=480-total;
+  const remClass=rem>0?'ok':rem===0?'ok':'over';
+  document.getElementById('pt-used').textContent=total+'m';
+  const remEl=document.getElementById('pt-remaining');
+  remEl.textContent=Math.max(0,rem)+'m';
+  remEl.className='pc-remaining '+remClass;
+  document.getElementById('pt-counter').style.display='flex';
+}
+
+function renderPatView(id,et,det,mn,adj){
+  const tr=document.getElementById('pt-'+id);
+  tr.dataset.et=et;tr.dataset.det=det;tr.dataset.mn=mn;tr.dataset.adj=adj;
+  const adjLabel=adj==='adj'?'ADJ':'FIXED';
+  const adjClass=adj==='adj'?'tadj':'tfix';
+  tr.innerHTML=`<td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--txt);font-weight:500">${esc(et)}</td><td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--txt2)">${esc(det)}</td><td style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--acc);font-weight:700">${mn}m</td><td><span class="tag ${adjClass}">${adjLabel}</span></td><td><div style="display:flex;gap:4px"><button class="btn-edit" onclick="editPat(${id})">Edit</button><button class="btn-del" title="Delete" onclick="document.getElementById('pt-${id}').remove()">✕</button></div></td>`;
+}
+
+function savePat(id){
+  const et=getDDOVal('pte-sel-'+id,'pte-'+id);
+  const det=getDDOVal('ptd-sel-'+id,'ptd-'+id);
+  const mn=getDDOVal('ptm-sel-'+id,'ptm-'+id);
+  const adj=document.getElementById('pta-'+id).value;
+  if(!et){showToast('Please select or enter an Effort Type.');return;}
+  if(!det){showToast('Please select or enter Effort Details.');return;}
+  if(!mn||parseInt(mn)<1){showToast('Please select or enter valid Mins.');return;}
+  // Check total won't exceed 480
+  const rows=document.getElementById('pt-body').children;
+  let otherTotal=0;
+  for(const row of rows){
+    if(row.id==='pt-'+id) continue;
+    otherTotal+=parseInt(row.dataset.mn||0)||0;
+  }
+  const newMn=parseInt(mn);
+  if(otherTotal+newMn>480){
+    showToast(`Total would be ${otherTotal+newMn}m — exceeds 480m limit. Max you can add here: ${480-otherTotal}m.`);
+    return;
+  }
+  // Validate ADJ count — count all OTHER saved rows + this one
+  const rows2=document.getElementById('pt-body').children;
+  let adjCount=0;
+  for(const row of rows2){
+    if(row.id==='pt-'+id) continue; // skip current row (being replaced)
+    if(row.dataset.adj==='adj') adjCount++;
+  }
+  if(adj==='adj') adjCount++; // add this row's value
+  if(adjCount>1){
+    showToast('Only one Adjustable row allowed. Please set the existing ADJ row to Fixed first.','warn');
+    // highlight the select to make it obvious
+    const adjSel=document.getElementById('pta-'+id);
+    if(adjSel){adjSel.style.borderColor='var(--red)';setTimeout(()=>adjSel.style.borderColor='',2500);}
+    return;
+  }
+  renderPatView(id,et,det,mn,adj);
+  updatePatCounter();
+  // Warn if no ADJ row exists yet
+  const allRows=document.getElementById('pt-body').children;
+  let hasAdj=false;
+  for(const r of allRows){if(r.dataset.adj==='adj')hasAdj=true;}
+  if(!hasAdj) showToast('Reminder: Add one Adjustable row to complete your pattern.');
+}
+
+function editPat(id){
+  const tr=document.getElementById('pt-'+id);
+  const et=tr.dataset.et||'';
+  const det=tr.dataset.det||'';
+  const mn=tr.dataset.mn||'';
+  const adj=tr.dataset.adj||'adj';
+  tr.innerHTML=`<td>${makeDDO('pte-sel-'+id,'pte-'+id,ET_OPTS,et,'e.g. Project - Meetings')}</td><td>${makeDDO('ptd-sel-'+id,'ptd-'+id,DET_OPTS,det,'Effort Details')}</td><td>${makeMinsDDO('ptm-sel-'+id,'ptm-'+id,mn)}</td><td><select id="pta-${id}"><option value="fixed"${adj==='fixed'?' selected':''}>Fixed</option><option value="adj"${adj==='adj'?' selected':''}>Adjustable</option></select></td><td><div style="display:flex;gap:4px"><button class="btn-save" onclick="savePat(${id})">Save</button><button class="btn-rm" onclick="editPatCancel(${id})">X</button></div></td>`;
+}
+
+function editPatCancel(id){
+  const tr=document.getElementById('pt-'+id);
+  if(!tr.dataset.et){tr.remove();return;}
+  renderPatView(id,tr.dataset.et,tr.dataset.det,tr.dataset.mn,tr.dataset.adj);
+}
+
+function addPat(){
+  const id=++ptId,tr=document.createElement('tr');tr.id='pt-'+id;
+  tr.innerHTML=`<td>${makeDDO('pte-sel-'+id,'pte-'+id,ET_OPTS,'','e.g. Project - Meetings')}</td><td>${makeDDO('ptd-sel-'+id,'ptd-'+id,DET_OPTS,'','Effort Details')}</td><td>${makeMinsDDO('ptm-sel-'+id,'ptm-'+id,'')}</td><td><select id="pta-${id}"><option value="fixed">Fixed</option><option value="adj" selected>Adjustable</option></select></td><td><div style="display:flex;gap:4px"><button class="btn-save" onclick="savePat(${id})">Save</button><button class="btn-rm" onclick="document.getElementById('pt-${id}').remove()">X</button></div></td>`;
+  document.getElementById('pt-body').appendChild(tr);
+}
+
+/* ── Pattern Preview ── */
+function getRel(){const v=document.getElementById('f-release').value.trim();return(!v||v.toUpperCase()==='NONE')?'General Activities':v;}
+
+function updateReleasePlaceholder(){
+  const v=document.getElementById('f-release').value.trim();
+  const hint=document.getElementById('f-release-hint');
+  if(hint){
+    if(!v||v.toUpperCase()==='NONE'){
+      hint.style.display='block';
+    } else {
+      hint.style.display='none';
+    }
+  }
+}
+function onLobChange(){
+  const v=document.getElementById('f-lob').value;
+  const othWrap=document.getElementById('lob-other-wrap');
+  if(othWrap) othWrap.style.display=v==='Other'?'block':'none';
+  _syncRow1b();
+  updateSteps();
+}
+
+/* Show/hide row1b (custom fields row) based on whether either custom field is visible */
+function _syncRow1b(){
+  const lobOther=document.getElementById('lob-other-wrap');
+  const teamOther=document.getElementById('other-team-cell');
+  const row1b=document.getElementById('basic-row1b');
+  if(!row1b)return;
+  const anyVisible=(lobOther&&lobOther.style.display!=='none')||(teamOther&&teamOther.style.display!=='none');
+  row1b.style.display=anyVisible?'grid':'none';
+}
+
+function onTeamChange(){
+  const v=document.getElementById('f-team').value;
+  const isOther=v==='Other';
+  /* Custom team name cell */
+  const otherCell=document.getElementById('other-team-cell');
+  if(otherCell) otherCell.style.display=isOther?'block':'none';
+  _syncRow1b();
+  /* Hide Activity/Efforts and Work Phases completely for Other team */
+  const relWrap=document.getElementById('release-field-wrap');
+  if(relWrap) relWrap.style.display=isOther?'none':'flex';
+  const phasesCard=document.getElementById('card-phases');
+  if(phasesCard) phasesCard.style.display=isOther?'none':'block';
+  /* If switching TO Other, reset phases/release and hide them */
+  if(isOther){
+    const togPhases=document.getElementById('tog-phases');
+    if(togPhases&&togPhases.checked){
+      togPhases.checked=false;
+      togChange('phases-sec','tr-phases',false);
+      onPhasesToggle();
+    }
+    /* Reset release field */
+    const relField=document.getElementById('f-release');
+    if(relField){relField.value='';relField.readOnly=false;relField.style.opacity='1';}
+    document.getElementById('f-release-phase-note').style.display='none';
+  }
+  /* Auto-enable custom patterns for Other team; reset when switching away */
+  if(isOther){
+    if(!document.getElementById('tog-cust').checked){
+      document.getElementById('tog-cust').checked=true;
+      togChange('cust-sec','tr-cust',true);
+    }
+  } else {
+    /* Switching to a named team — turn off custom patterns so defaults load */
+    if(document.getElementById('tog-cust').checked){
+      document.getElementById('tog-cust').checked=false;
+      togChange('cust-sec','tr-cust',false);
+    }
+  }
+  updatePatPrev();
+}
+
+/* ── Dropdown + Other helpers ── */
+const ET_OPTS=["Project - Dev - Releases","Project - Dev - Testing","Project - Dev - Coding","Project - Meetings","Project - Team Meetings","Project - One on One meetings","Project - KT","Non project - All Hands Meeting","Non project - Meeting with SLT","NonProject - Misc","Other - Time Off","Other - Public Holiday","Project - Training"];
+const DET_OPTS=["Iris Development","Story Groom / Dev Meeting","Staff Meeting","Miscellaneous Activities","Perf automation call","One to one","Release status call","Daily Standup Call","Team Meeting","ServiceNow and Remedy Daily Release Call","ServiceNow Workstream DSUs","Performance Testing and Automation Daily Checkpoint","ServiceNow , ITSM Remedy, IRIS SDLC Releases Scripting Testing and Regression Coordination","ServiceNow Release Activities","Release Team Meeting","ServiceNow Release call"];
+
+function makeDDO(selectId, inputId, options, currentVal, placeholder){
+  const isOther=currentVal&&!options.includes(currentVal);
+  const selOpts=options.map(o=>`<option value="${o}"${currentVal===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">- Select -</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other - type manually</option>
+    </select>
+    <input type="text" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="${placeholder}">
+  </div>`;
+}
+
+function makeAdhocMinsDDO(selectId, inputId, currentVal){
+  const opts=[15,30,60,90,120,180,200,240];
+  const isOther=currentVal&&![15,30,60,90,120,180,200,240].includes(Number(currentVal));
+  const selOpts=opts.map(o=>`<option value="${o}"${Number(currentVal)===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">-- Mins --</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other</option>
+    </select>
+    <input type="number" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="Custom mins" min="1" max="480">
+  </div>`;
+}
+
+function makeMinsDDO(selectId, inputId, currentVal){
+  const opts=[15,30,60,90,120,180,200,240,360];
+  const isOther=currentVal&&!opts.includes(Number(currentVal));
+  const selOpts=opts.map(o=>`<option value="${o}"${Number(currentVal)===o?' selected':''}>${o}</option>`).join('');
+  return `<div class="dd-wrap">
+    <select id="${selectId}" onchange="onDDOChange('${selectId}','${inputId}',this.value)">
+      <option value="">- Mins -</option>
+      ${selOpts}
+      <option value="__other__"${isOther?' selected':''}>Other</option>
+    </select>
+    <input type="number" id="${inputId}" class="dd-other${isOther?' show':''}" value="${isOther?currentVal:''}" placeholder="Custom mins" min="1" max="480">
+  </div>`;
+}
+
+function onDDOChange(selectId, inputId, val){
+  const inp=document.getElementById(inputId);
+  if(val==='__other__'){
+    inp.classList.add('show');
+    inp.value='';
+    inp.focus();
+  } else {
+    inp.classList.remove('show');
+    inp.value=val==='__other__'?'':val;
+  }
+  // trigger live validation if this is a mins field
+  const m=inputId.match(/dpr-m-i-(\d+)/);
+  if(m) liveValidateMins(parseInt(m[1]));
+}
+
+function getDDOVal(selectId, inputId){
+  const sel=document.getElementById(selectId);
+  const inp=document.getElementById(inputId);
+  if(!sel) return inp?inp.value.trim():'';
+  return sel.value==='__other__'?inp.value.trim():sel.value;
+}
+
+/* ── Default pattern store ── */
+let defPats=[];
+
+function getDefaultRows(team,rel){
+  /* Use [RELEASE] token for adjustable rows so phases can substitute per-day */
+  const adjDet=document.getElementById('tog-phases')?.checked?'[RELEASE]':rel;
+  return team==='SMT-Quality Management'?[
+    {et:'Project - Dev - Releases',det:'Release status call',mins:60,adj:false},
+    {et:'Project - Meetings',det:'Daily Standup Call',mins:60,adj:false},
+    {et:'Project - Dev - Testing',det:adjDet,mins:360,adj:true}
+  ]:team==='SMT-TMS'?[
+    {et:'Project - Dev - Coding',det:adjDet,mins:360,adj:true},
+    {et:'Project - Meetings',det:'Story Groom / Dev Meeting',mins:30,adj:false},
+    {et:'Project - Team Meetings',det:'Staff Meeting',mins:30,adj:false},
+    {et:'NonProject - Misc',det:'Miscellaneous Activities',mins:60,adj:false}
+  ]:[
+    {et:'Project - Meetings',det:'Daily Standup Call',mins:60,adj:false},
+    {et:'Project - Meetings',det:'Team Meeting',mins:60,adj:false},
+    {et:'Project - Dev - Coding',det:adjDet,mins:360,adj:true}
+  ];
+}
+
+function addDefPat(){
+  defPats.push({et:'',det:'',mins:60,adj:false});
+  renderDefPats();
+  editDefPat(defPats.length-1);
+}
+
+function delDefPat(i){
+  if(defPats.length<=1){showToast('At least one pattern row is required.');return;}
+  defPats.splice(i,1);
+  renderDefPats();
+}
+
+function renderDefPats(){
+  const el=document.getElementById('def-pat');
+  if(!defPats.length){el.innerHTML='<p class="no-team-msg">&#8592; Select a Project Team in Basic Info to preview default patterns.</p>';return;}
+  const fixedTotal=defPats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0);
+  const adjCount=defPats.filter(p=>p.adj).length;
+  let html=`<div class="def-pat-hdr"><span>Effort Type</span><span>Effort Details</span><span>Mins</span><span>Type</span><span></span></div>`;
+  defPats.forEach((p,i)=>{
+    html+=`<div class="def-pat-row" id="dpr-${i}">
+      <span class="pr-val et" id="dpr-et-v-${i}">${esc(p.et)}</span>
+      <span class="pr-val" id="dpr-det-v-${i}">${p.det==='[RELEASE]'?'<span style="color:var(--acc);font-family:\'DM Mono\',monospace;font-size:.68rem;background:var(--adim);border:1px solid rgba(62,207,106,.25);border-radius:4px;padding:1px 7px;">phase label</span>':esc(p.det)}</span>
+      <span class="pr-val"><span class="pr-mins" style="color:var(--acc);font-weight:500">${p.mins}m</span></span>
+      <span class="pr-val"><span class="tag ${p.adj?'tadj':'tfix'}">${p.adj?'ADJ':'FIXED'}</span></span>
+      <div style="display:flex;gap:4px;"><button class="btn-edit" onclick="editDefPat(${i})">Edit</button><button class="btn-del" onclick="delDefPat(${i})" title="Delete row"></button></div>
+    </div>`;
+  });
+  const grandTotal=defPats.reduce((s,p)=>s+p.mins,0);
+  const remaining=480-grandTotal;
+  const remClass=remaining>0?'ok':remaining===0?'ok':'over';
+  html+=`<div class="pat-mins-warn" id="def-mins-warn">Total fixed mins must be less than 480</div>`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+    <button class="btn-add" onclick="addDefPat()">＋ Add Pattern Row</button>
+    <div class="pat-counter">
+      <span><span class="pc-label">TOTAL USED&nbsp;&nbsp;</span><span class="pc-used">${grandTotal}m</span><span class="pc-label"> / 480m</span></span>
+      <span style="color:rgba(255,255,255,.15)">|</span>
+      <span><span class="pc-label">REMAINING&nbsp;&nbsp;</span><span class="pc-remaining ${remClass}">${remaining>=0?remaining:0}m</span></span>
+    </div>
+  </div>`;
+  el.innerHTML=html;
+}
+
+function cancelDefPat(i){
+  // If row was newly added (empty), remove it
+  if(!defPats[i].et&&!defPats[i].det&&defPats.length>1){
+    defPats.splice(i,1);
+  }
+  renderDefPats();
+}
+
+function editDefPat(i){
+  const p=defPats[i];
+  const row=document.getElementById('dpr-'+i);
+  row.classList.add('editing');
+  row.innerHTML=`
+    ${makeDDO('dpr-et-sel-'+i,'dpr-et-i-'+i,ET_OPTS,esc(p.et),'Type custom effort type')}
+    ${makeDDO('dpr-det-sel-'+i,'dpr-det-i-'+i,DET_OPTS,esc(p.det),'Type custom effort details')}
+    <div style="position:relative">
+      ${makeMinsDDO('dpr-m-sel-'+i,'dpr-m-i-'+i,p.mins)}
+      <div id="dpr-m-err-${i}" style="position:absolute;top:100%;left:0;font-size:.62rem;font-family:'DM Mono',monospace;white-space:nowrap;display:none;margin-top:2px;"></div>
+    </div>
+    <select id="dpr-a-i-${i}" onchange="liveValidateMins(${i})">
+      <option value="fixed" ${!p.adj?'selected':''}>Fixed</option>
+      <option value="adj" ${p.adj?'selected':''}>Adjustable</option>
+    </select>
+    <div style="display:flex;gap:4px;"><button class="btn-save" onclick="saveDefPat(${i})" title="Save">✔</button><button class="btn-rm" onclick="cancelDefPat(${i})" title="Cancel">×</button></div>`;
+}
+
+function liveValidateMins(i){
+  const errEl=document.getElementById('dpr-m-err-'+i);
+  const mins=parseInt(getDDOVal('dpr-m-sel-'+i,'dpr-m-i-'+i))||0;
+  const otherTotal=defPats.filter((_,idx)=>idx!==i).reduce((s,p)=>s+p.mins,0);
+  const total=otherTotal+mins;
+  if(total>480){
+    const allowed=480-otherTotal;
+    errEl.textContent=`Total exceeds 480m - max allowed here: ${allowed}m`;
+    errEl.style.display='block';
+    errEl.style.color='var(--red)';
+  } else if(total===480){
+    errEl.textContent=`✔ Total exactly 480m`;
+    errEl.style.display='block';
+    errEl.style.color='var(--acc)';
+  } else {
+    errEl.textContent=`${total}m of 480m used`;
+    errEl.style.display='block';
+    errEl.style.color='var(--mut)';
+  }
+}
+
+function saveDefPat(i){
+  const et=getDDOVal('dpr-et-sel-'+i,'dpr-et-i-'+i);
+  const det=getDDOVal('dpr-det-sel-'+i,'dpr-det-i-'+i);
+  const mins=parseInt(getDDOVal('dpr-m-sel-'+i,'dpr-m-i-'+i));
+  const adj=document.getElementById('dpr-a-i-'+i).value==='adj';
+  if(!et||!det||isNaN(mins)||mins<1){
+    showToast('Please fill all fields. Mins must be at least 1.');return;
+  }
+  const testPats=defPats.map((p,idx)=>idx===i?{et,det,mins,adj}:p);
+  const grandTotal=testPats.reduce((s,p)=>s+p.mins,0);
+  if(grandTotal>480){
+    const otherTotal=defPats.filter((_,idx)=>idx!==i).reduce((s,p)=>s+p.mins,0);
+    const allowed=480-otherTotal;
+    showToast(`Total would be ${grandTotal}m — exceeds 480m limit. Max allowed here: ${allowed}m`);
+    // flash the mins field red
+    const mSel=document.getElementById('dpr-m-sel-'+i);
+    if(mSel){mSel.style.borderColor='var(--red)';setTimeout(()=>mSel.style.borderColor='',2500);}
+    return;
+  }
+  const adjCount=testPats.filter(p=>p.adj).length;
+  if(adjCount===0){
+    showToast('At least one pattern must be Adjustable.');
+    const aSel=document.getElementById('dpr-a-i-'+i);
+    if(aSel){aSel.style.borderColor='var(--red)';setTimeout(()=>aSel.style.borderColor='',2500);}
+    return;
+  }
+  if(adjCount>1){
+    showToast('Only one pattern can be Adjustable. Change the existing ADJ row to Fixed first.');
+    const aSel=document.getElementById('dpr-a-i-'+i);
+    if(aSel){aSel.style.borderColor='var(--red)';setTimeout(()=>aSel.style.borderColor='',2500);}
+    return;
+  }
+  defPats[i]={et,det,mins,adj};
+  renderDefPats();
+}
+
+/* ── Work Phases ── */
+let phaseId=0;
+
+/* Store saved phase data keyed by id */
+const phaseData={};
+
+/* store flatpickr instances for phases */
+const phaseFpFrom={};
+const phaseFpTo={};
+
+function onReleaseInput(){
+  updatePatPrev();
+  updateReleasePlaceholder();
+}
+
+function onPhasesToggle(){
+  if(document.getElementById('f-team').value==='Other'){
+    document.getElementById('tog-phases').checked=false;
+    return;
+  }
+  const on=document.getElementById('tog-phases').checked;
+  /* Guard: require month + year before enabling phases */
+  if(on){
+    const mon=document.getElementById('f-month').value;
+    const yr=document.getElementById('f-year').value;
+    if(!mon||!yr){
+      document.getElementById('tog-phases').checked=false;
+      togChange('phases-sec','tr-phases',false);
+      showToast('Please select a Month and Year in Basic Info before enabling Work Phases.');
+      return;
+    }
+  }
+  const relField=document.getElementById('f-release');
+  if(on){
+    relField.placeholder='';
+    relField.style.opacity='.4';
+    relField.readOnly=true;
+    document.getElementById('f-release-phase-note').style.display='block';
+    if(document.getElementById('phases-list').children.length===0){
+      addPhase();addPhase();
+    }
+  } else {
+    relField.placeholder='e.g. ServiceNow Release 25.1';
+    relField.style.opacity='1';
+    relField.readOnly=false;
+    relField.value='';
+    document.getElementById('f-release-phase-note').style.display='none';
+  }
+  updatePatPrev();
+}
+
+function getMonthBounds(){
+  const mon=parseInt(document.getElementById('f-month').value||0);
+  const yr=parseInt(document.getElementById('f-year').value||0);
+  if(!mon||!yr)return{first:null,last:null};
+  const first=new Date(yr,mon-1,1);
+  const last=new Date(yr,mon,0);
+  return{first,last};
+}
+
+function nextWorkday(date){
+  const d=new Date(date);
+  d.setDate(d.getDate()+1);
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1);
+  return d;
+}
+
+function fmtISO(d){
+  if(!d)return'';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* ── Render a phase row in VIEW mode (like daily patterns) ── */
+function renderPhaseView(id){
+  const p=phaseData[id];
+  const row=document.getElementById('ph-'+id);
+  row.classList.remove('editing');
+  const num=row.dataset.num||'?';
+  row.innerHTML=`
+    <div class="phase-num">${num}</div>
+    <div><div class="phase-lbl">From</div><span class="phase-val date">${p.from}</span></div>
+    <div><div class="phase-lbl">To</div><span class="phase-val date">${p.to}</span></div>
+    <div class="phase-label-field"><div class="phase-lbl">Release / Activity</div><span class="phase-val label" title="${esc(p.lbl)}">${esc(p.lbl)}</span></div>
+    <div style="display:flex;gap:4px;">
+      <button class="btn-edit" onclick="editPhase(${id})">Edit</button>
+      <button class="btn-del" title="Delete" onclick="removePhase(${id})">✕</button>
+    </div>
+    <div class="phase-err" id="ph-err-${id}" style="display:none;"></div>`;
+}
+
+/* ── Render a phase row in EDIT mode ── */
+function renderPhaseEdit(id, defFrom, defTo, defLbl){
+  const row=document.getElementById('ph-'+id);
+  row.classList.add('editing');
+  const num=row.dataset.num||'?';
+  row.innerHTML=`
+    <div class="phase-num">${num}</div>
+    <div>
+      <div class="phase-lbl">From</div>
+      <input type="text" id="ph-from-${id}" placeholder="Pick date" readonly style="cursor:pointer;">
+      <input type="hidden" id="ph-from-val-${id}" value="${defFrom||''}">
+    </div>
+    <div>
+      <div class="phase-lbl">To</div>
+      <input type="text" id="ph-to-${id}" placeholder="Pick date" readonly style="cursor:pointer;">
+      <input type="hidden" id="ph-to-val-${id}" value="${defTo||''}">
+    </div>
+    <div class="phase-label-field">
+      <div class="phase-lbl">Release / Activity Label</div>
+      <input type="text" id="ph-lbl-${id}" placeholder="e.g. ServiceNow Release 25.1" value="${esc(defLbl||'')}">
+    </div>
+    <div style="display:flex;gap:4px;padding-top:2px;">
+      <button class="btn-save" onclick="savePhase(${id})" title="Save">Save</button>
+      <button class="btn-rm" onclick="cancelPhase(${id})" title="Cancel">×</button>
+    </div>
+    <div class="phase-err" id="ph-err-${id}" style="display:none;"></div>`;
+
+  /* Init flatpickr */
+  const calCfg=getCalConfig();
+  const sharedCfg={
+    dateFormat:'Y-m-d',
+    disableMobile:true,
+    allowInput:false,
+    disable:[d=>d.getDay()===0||d.getDay()===6],
+    minDate:calCfg.minDate||undefined,
+    maxDate:calCfg.maxDate||undefined,
+    onMonthChange:calCfg.onMonthChange||undefined,
+    onYearChange:calCfg.onYearChange||undefined,
+  };
+
+  if(phaseFpFrom[id]){phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  if(phaseFpTo[id]){phaseFpTo[id].destroy();delete phaseFpTo[id];}
+
+  phaseFpFrom[id]=flatpickr('#ph-from-'+id, Object.assign({},sharedCfg,{
+    defaultDate: defFrom||undefined,
+    onChange(sel){
+      const ds=sel[0]?flatpickr.formatDate(sel[0],'Y-m-d'):'';
+      document.getElementById('ph-from-val-'+id).value=ds;
+      const toVal=document.getElementById('ph-to-val-'+id).value;
+      if(ds&&toVal&&ds>toVal){
+        phaseFpTo[id]&&phaseFpTo[id].setDate(ds,false);
+        document.getElementById('ph-to-val-'+id).value=ds;
+      }
+      phaseFpTo[id]&&phaseFpTo[id].set('minDate',ds||calCfg.minDate);
+    }
+  }));
+
+  phaseFpTo[id]=flatpickr('#ph-to-'+id, Object.assign({},sharedCfg,{
+    defaultDate: defTo||undefined,
+    minDate: defFrom||calCfg.minDate||undefined,
+    onChange(sel){
+      const ds=sel[0]?flatpickr.formatDate(sel[0],'Y-m-d'):'';
+      document.getElementById('ph-to-val-'+id).value=ds;
+    }
+  }));
+
+  /* Open date picker for new phases */
+  if(!defFrom) setTimeout(()=>{ const el=document.getElementById('ph-from-'+id); if(el)el.click(); },80);
+}
+
+function addPhase(){
+  const mon=document.getElementById('f-month').value;
+  const yr=document.getElementById('f-year').value;
+  if(!mon||!yr){showToast('Please select a Month and Year in Basic Info before adding phases.');return;}
+  const id=++phaseId;
+  const list=document.getElementById('phases-list');
+  const idx=list.children.length;
+  const row=document.createElement('div');
+  row.className='phase-row editing';
+  row.id='ph-'+id;
+  row.dataset.num=idx+1;
+  list.appendChild(row);
+  renderPhaseEdit(id,'','','');
+  renumberPhases();
+  limitAddBtn();
+}
+
+function editPhase(id){
+  const p=phaseData[id]||{};
+  renderPhaseEdit(id, p.from||'', p.to||'', p.lbl||'');
+}
+
+function cancelPhase(id){
+  /* If never saved (no data), remove the row entirely */
+  if(!phaseData[id]){
+    removePhase(id);
+    return;
+  }
+  /* Otherwise revert to saved view */
+  if(phaseFpFrom[id]){phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  if(phaseFpTo[id]){phaseFpTo[id].destroy();delete phaseFpTo[id];}
+  renderPhaseView(id);
+}
+
+function savePhase(id){
+  const from=document.getElementById('ph-from-val-'+id).value;
+  const to=document.getElementById('ph-to-val-'+id).value;
+  const lbl=document.getElementById('ph-lbl-'+id).value.trim();
+
+  /* ── Validation ── */
+  if(!from&&!to){phShowErr(id,'Please pick a From date and a To date.');return;}
+  if(!from){phShowErr(id,'Please pick a From date.');return;}
+  if(!to){phShowErr(id,'Please pick a To date.');return;}
+  if(from>to){phShowErr(id,'From date cannot be after the To date.');return;}
+  if(!lbl){phShowErr(id,'Release / Activity Label is required.');return;}
+
+  const {first,last}=getMonthBounds();
+  if(first&&last){
+    const firstISO=fmtISO(first),lastISO=fmtISO(last);
+    if(from<firstISO||to>lastISO){
+      phShowErr(id,'Phase dates must fall within the selected month ('+firstISO+' – '+lastISO+').');
+      return;
+    }
+  }
+
+  /* Overlap check against other SAVED phases */
+  const list=document.getElementById('phases-list').children;
+  for(const otherRow of list){
+    if(otherRow.id==='ph-'+id)continue;
+    const oid=parseInt(otherRow.id.replace('ph-',''));
+    if(!phaseData[oid])continue;
+    const of=phaseData[oid].from, ot=phaseData[oid].to;
+    if(!of||!ot)continue;
+    if(from<=ot&&to>=of){
+      const pNum=otherRow.dataset.num||'?';
+      phShowErr(id,'Date range overlaps with Phase '+pNum+' ('+of+' → '+ot+'). Adjust the dates.');
+      return;
+    }
+  }
+
+  /* ── Save data and switch to view mode ── */
+  if(phaseFpFrom[id]){phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  if(phaseFpTo[id]){phaseFpTo[id].destroy();delete phaseFpTo[id];}
+  phaseData[id]={from,to,lbl};
+
+  /* Auto-snap next phase's From date */
+  const rows=Array.from(document.getElementById('phases-list').children);
+  const idx=rows.findIndex(r=>r.id==='ph-'+id);
+  if(idx!==-1&&idx<rows.length-1){
+    const nextRow=rows[idx+1];
+    const nextId=parseInt(nextRow.id.replace('ph-',''));
+    /* Only snap if the next phase is currently in edit mode and has no saved from */
+    if(!phaseData[nextId]||nextRow.classList.contains('editing')){
+      const snapDate=nextWorkday(new Date(to+'T00:00:00'));
+      const snapISO=fmtISO(snapDate);
+      /* Update hidden input if exists */
+      const nextFromVal=document.getElementById('ph-from-val-'+nextId);
+      if(nextFromVal) nextFromVal.value=snapISO;
+      if(phaseFpFrom[nextId]){
+        phaseFpFrom[nextId].setDate(snapISO,false);
+        phaseFpFrom[nextId].set('minDate',snapISO);
+      }
+    }
+  }
+
+  renderPhaseView(id);
+  const rowEl=document.getElementById('ph-'+id);
+  showToast('Phase '+(rowEl?rowEl.dataset.num:'')+ ' saved — '+lbl,'success');
+  hidePhasesWarn();
+}
+
+/* Inline error helpers */
+function phShowErr(id,msg){
+  const el=document.getElementById('ph-err-'+id);
+  if(!el)return;
+  el.textContent=msg;
+  el.style.display='block';
+}
+function phClearErr(id){
+  const el=document.getElementById('ph-err-'+id);
+  if(el){el.textContent='';el.style.display='none';}
+}
+
+function removePhase(id){
+  if(phaseFpFrom[id]){phaseFpFrom[id].destroy();delete phaseFpFrom[id];}
+  if(phaseFpTo[id]){phaseFpTo[id].destroy();delete phaseFpTo[id];}
+  delete phaseData[id];
+  const row=document.getElementById('ph-'+id);
+  if(row)row.remove();
+  renumberPhases();
+  limitAddBtn();
+}
+
+function renumberPhases(){
+  const rows=document.getElementById('phases-list').children;
+  for(let i=0;i<rows.length;i++){
+    rows[i].dataset.num=i+1;
+    const numEl=rows[i].querySelector('.phase-num');
+    if(numEl)numEl.textContent=i+1;
+  }
+}
+
+function limitAddBtn(){
+  const count=document.getElementById('phases-list').children.length;
+  document.getElementById('btn-add-phase').style.display=count>=4?'none':'inline-flex';
+}
+
+
+function getPhasesForDate(dateStr){
+  /* Return label for a given YYYY-MM-DD date, or null if no phases active */
+  if(!document.getElementById('tog-phases').checked)return null;
+  for(const[id,p] of Object.entries(phaseData)){
+    if(p.from&&p.to&&p.lbl&&dateStr>=p.from&&dateStr<=p.to)return p.lbl;
+  }
+  return null;/* date not covered by any phase */
+}
+
+function validatePhases(){
+  if(!document.getElementById('tog-phases').checked)return true;
+  const list=document.getElementById('phases-list').children;
+  if(!list.length){showPhasesWarn('Please add at least one phase.');return false;}
+
+  const {first,last}=getMonthBounds();
+  const saved=[];
+
+  for(const row of list){
+    const id=parseInt(row.id.replace('ph-',''));
+    const pNum=row.dataset.num||'?';
+
+    /* Any row still in edit mode (unsaved) blocks generation */
+    if(row.classList.contains('editing')){
+      showPhasesWarn('Phase '+pNum+' has unsaved changes — click Save before generating.');return false;
+    }
+
+    const p=phaseData[id];
+    if(!p||!p.from||!p.to){showPhasesWarn('Phase '+pNum+': From and To dates are required.');return false;}
+    if(p.from>p.to){showPhasesWarn('Phase '+pNum+': From date cannot be after the To date.');return false;}
+    if(!p.lbl){showPhasesWarn('Phase '+pNum+': Release / Activity label is required.');return false;}
+    if(first&&(p.from<fmtISO(first)||p.to>fmtISO(last))){
+      showPhasesWarn('Phase '+pNum+': dates must fall within the selected month.');return false;
+    }
+
+    /* Overlap check against already-validated phases */
+    for(const s of saved){
+      if(p.from<=s.to&&p.to>=s.from){
+        showPhasesWarn('Phase '+pNum+' overlaps with Phase '+s.num+'. Adjust the date ranges.');return false;
+      }
+    }
+    saved.push({from:p.from,to:p.to,num:pNum});
+  }
+
+  hidePhasesWarn();
+  return true;
+}
+
+function showPhasesWarn(msg){
+  const w=document.getElementById('phases-warn');
+  w.textContent=msg;w.style.display='block';
+}
+function hidePhasesWarn(){
+  document.getElementById('phases-warn').style.display='none';
+}
+
+function updatePatPrev(){
+  const team=document.getElementById('f-team').value,rel=getRel();
+  const el=document.getElementById('def-pat');
+  if(!team){el.innerHTML='<p class="no-team-msg">&#8592; Select a Project Team in Basic Info to preview default patterns.</p>';defPats=[];return;}
+  if(team==='Other'){el.innerHTML='<p class="no-team-msg">Custom Project Team selected - use the Custom Pattern Builder above.</p>';defPats=[];return;}
+  defPats=getDefaultRows(team,rel);
+  renderDefPats();
+  updateGenSummary();
+}
+
+function getLob(){
+  const sel=document.getElementById('f-lob');
+  if(!sel)return'SMT';
+  const v=sel.value;
+  if(!v)return'SMT';
+  if(v==='Other'){
+    const oth=document.getElementById('f-lob-other');
+    return oth?oth.value.trim()||'SMT':'SMT';
+  }
+  return v;
+}
+
+/* ── Helpers ── */
+function isWknd(d){const w=d.getDay();return w===0||w===6;}
+function fmtD(d){return`${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;}
+function getBiz(y,m){const a=[];let d=new Date(y,m-1,1);while(d.getMonth()===m-1){if(!isWknd(d))a.push(new Date(d));d.setDate(d.getDate()+1);}return a;}
+function showErr(msg){const e=document.getElementById('err-box');e.textContent=''+msg;e.style.display='block';e.scrollIntoView({behavior:'smooth',block:'center'});}
+function clrErr(){document.getElementById('err-box').style.display='none';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ── Generate ── */
+function generate(){
+  clrErr();
+  const name=document.getElementById('f-name').value.trim();
+  const team=document.getElementById('f-team').value;
+  const mon=parseInt(document.getElementById('f-month').value);
+  const yr=parseInt(document.getElementById('f-year').value);
+  if(!name)return showErr('Please enter your full name.');
+  if(!team)return showErr('Please select a Project Team.');
+  if(team==='Other'&&!document.getElementById('f-team-other').value.trim())return showErr('Please enter your custom Project Team name.');
+  if(!mon)return showErr('Please select a month.');
+  if(!yr||yr<2020||yr>2099)return showErr('Please enter a valid year (2020-2099).');
+  const release=getRel();
+  const projTeam=team==='Other'?document.getElementById('f-team-other').value.trim():team;
+  const warns=[];
+  if(!validatePhases())return;
+
+  /* Leaves */
+  const leavesMap={};
+  if(document.getElementById('tog-leave').checked){
+    if(!Object.keys(lvSelectedDates).length)return showErr('Please select at least one leave date.');
+    for(const [ds,tp] of Object.entries(lvSelectedDates)){
+      const d=new Date(ds+'T00:00:00');
+      if(isWknd(d)){warns.push(`${ds} is a weekend - leave skipped.`);continue;}
+      const leaveET=tp==='Holiday'?'Other - Public Holiday':'Other - Time Off';
+      leavesMap[fmtD(d)]={tp,et:leaveET};
+    }
+  }
+
+  /* Adhoc */
+  const adhocMap={};
+  if(document.getElementById('tog-adhoc').checked){
+    for(const ahRow of document.getElementById('ah-list').children){
+      if(ahRow.classList.contains('editing'))return showErr('Please save all unsaved adhoc entries before generating.');
+      const id=ahRow.id.replace('ah-','');
+      const ds=ahRow.dataset.ds||'';
+      const et=ahRow.dataset.et||getDDOVal('ahe-sel-'+id,'ahe-'+id);
+      const det=ahRow.dataset.det||getDDOVal('ahdet-sel-'+id,'ahdet-'+id);
+      const mn=parseInt(ahRow.dataset.mn||getDDOVal('ahm-sel-'+id,'ahm-'+id));
+      if(!ds||!et||!det||isNaN(mn))return showErr('Please fill in all adhoc fields.');
+      if(mn<1||mn>480)return showErr('Adhoc minutes must be 1-480.');
+      const d=new Date(ds+'T00:00:00');
+      if(isWknd(d))return showErr(`Adhoc date ${ds} is a weekend - only Mon-Fri allowed.`);
+      const k=fmtD(d);
+      if(!adhocMap[k])adhocMap[k]=[];
+      adhocMap[k].push({et,det,mins:mn});
+    }
+    for(const k in adhocMap){
+      if(leavesMap[k]){
+        warns.push(k+': adhoc entry skipped — this day is a leave day.');
+        delete adhocMap[k];
+      }
+    }
+    for(const k in adhocMap)adhocMap[k].sort((a,b)=>b.mins-a.mins);
+  }
+
+  /* Patterns */
+  let pats=[];
+  if(document.getElementById('tog-cust').checked){
+    const rows=document.getElementById('pt-body').children;
+    if(!rows.length)return showErr('Please add at least one custom pattern row.');
+    let adjN=0;
+    for(const row of rows){
+      if(row.classList.contains('editing'))return showErr('Please save all unsaved pattern rows before generating.');
+      const id=row.id.replace('pt-','');
+      const et=row.dataset.et||getDDOVal('pte-sel-'+id,'pte-'+id);
+      const det=(row.dataset.det||getDDOVal('ptd-sel-'+id,'ptd-'+id)).replace(/\[RELEASE\]/g,release);
+      const mn=parseInt(row.dataset.mn||getDDOVal('ptm-sel-'+id,'ptm-'+id));
+      const adj=(row.dataset.adj||document.getElementById('pta-'+id)?.value||'adj')==='adj';
+      if(!et||!det||isNaN(mn))return showErr('Please fill in all custom pattern fields.');
+      if(adj)adjN++;
+      pats.push({et,det,mins:mn,adj});
+    }
+    if(adjN===0)return showErr('Custom patterns: exactly one row must be Adjustable.');
+    if(adjN>1)return showErr('Custom patterns: only one row can be Adjustable.');
+    if(pats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0)>=480)return showErr('Fixed pattern minutes must total less than 480.');
+  }else{
+    pats=defPats.map(p=>({...p}));
+  }
+
+  /* Warn if total pattern mins < 480 (ADJ row will be reduced) */
+  const patTotal=pats.reduce((s,p)=>s+p.mins,0);
+  if(patTotal<480){
+    const adjP=pats.find(p=>p.adj);
+    const fixTotal=pats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0);
+    const adjWillBe=480-fixTotal;
+    // store full context so proceedGenerate can continue
+    showPatWarningModal(patTotal,adjP?adjP.et:'Adjustable',adjWillBe,
+      {pats,yr,mon,name,projTeam,release,leavesMap,adhocMap,warns});
+    return;
+  }
+
+  continueGenerate({pats,yr,mon,name,projTeam,release,leavesMap,adhocMap,warns});
+}
+
+function continueGenerate({pats,yr,mon,name,projTeam,release,leavesMap,adhocMap,warns}){
+  /* Build rows */
+  const days=getBiz(yr,mon);
+  const rows=[];
+  let leaveCnt=0;
+  for(const day of days){
+    const k=fmtD(day);
+    /* Determine release label for this day (phase-aware) */
+    const dayISO=fmtISO(day);
+    const dayRelease=getPhasesForDate(dayISO)||release;
+    if(leavesMap[k]){
+      leaveCnt++;
+      const lv=leavesMap[k];
+      rows.push({lob:getLob(),projTeam,et:lv.et,name,date:k,det:lv.tp,mins:480,isL:true});
+    }else{
+      /* Check phase coverage warning */
+      if(document.getElementById('tog-phases').checked&&!getPhasesForDate(dayISO)){
+        warns.push(k+': not covered by any phase - using default label.');
+      }
+      const ahs=adhocMap[k]||[];
+      for(const a of ahs)rows.push({lob:getLob(),projTeam,et:a.et,name,date:k,det:a.det,mins:a.mins,isL:false});
+      const ahSum=ahs.reduce((s,a)=>s+a.mins,0);
+      const fixSum=pats.filter(p=>!p.adj).reduce((s,p)=>s+p.mins,0);
+      if(ahSum+fixSum>480)return showErr(k+': Adhoc ('+ahSum+'m) + Fixed patterns ('+fixSum+'m) = '+(ahSum+fixSum)+'m which exceeds 480m.');
+      let adjM=Math.max(0,480-fixSum-ahSum);
+      /* Inject phase release label into pattern det where [RELEASE] token present */
+      for(const p of pats){
+        if(!p.adj){
+          const det=p.det.replace(/\[RELEASE\]/g,dayRelease);
+          rows.push({lob:getLob(),projTeam,et:p.et,name,date:k,det,mins:p.mins,isL:false});
+        }
+      }
+      const adjP=pats.find(p=>p.adj);
+      if(adjP){
+        const det=adjP.det.replace(/\[RELEASE\]/g,dayRelease);
+        rows.push({lob:getLob(),projTeam,et:adjP.et,name,date:k,det,mins:adjM,isL:false});
+      }
+    }
+  }
+
+  genRows=rows;
+  genMeta={name,team:projTeam,lob:getLob(),month:mon,year:yr,release,bizDays:days.length,leaveCnt,warns};
+  renderOutput(rows,warns,days.length,leaveCnt);
+}
+
+/* ── Render ── */
+function renderOutput(rows,warns,bizDays,leaveCnt){
+  const totMins=rows.reduce((s,r)=>s+r.mins,0);
+  const workDays=bizDays-leaveCnt;
+
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="sv">${bizDays}</div><div class="sl">Business Days</div></div>
+    <div class="stat"><div class="sv">${rows.length}</div><div class="sl">Total Rows</div></div>
+    <div class="stat"><div class="sv">${totMins}</div><div class="sl">Total Mins</div></div>
+    <div class="stat"><div class="sv">${(totMins/60).toFixed(1)}</div><div class="sl">Total Hours</div></div>`;
+
+  const byType={};
+  rows.forEach(r=>{if(!byType[r.et])byType[r.et]=0;byType[r.et]+=r.mins;});
+  const sorted=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const leaveP=totMins>0?(leaveCnt*480/totMins*100):0;
+  document.getElementById('breakdown').innerHTML=`
+    <div class="bk-card">
+      <div class="bk-title">Work vs Leave</div>
+      <div class="bk-row"><span class="bk-label">Working Days</span><span class="bk-val">${workDays}d · ${((totMins-leaveCnt*480)/60).toFixed(1)}h</span></div>
+      <div class="bk-row"><span class="bk-label">Leave Days</span><span class="bk-val">${leaveCnt}d · ${leaveCnt*8}h</span></div>
+      <div class="bk-bar"><div class="bk-bar-fill" style="width:${100-leaveP}%"></div></div>
+    </div>
+    <div class="bk-card">
+      <div class="bk-title">Hours by Effort Type</div>
+      ${sorted.map(([et,mins])=>`<div class="bk-row"><span class="bk-label">${esc(et)}</span><span class="bk-val">${(mins/60).toFixed(1)}h</span></div>`).join('')}
+    </div>`;
+
+  const tbody=document.getElementById('prev-body');
+  tbody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    if(r.isL)tr.className='is-leave';
+    tr.dataset.s=[r.et,r.det,r.date,r.name].join(' ').toLowerCase();
+    tr.innerHTML=`<td>${esc(r.lob)}</td><td>${esc(r.projTeam)}</td><td class="${r.isL?'lc':''}">${esc(r.et)}</td><td>${esc(r.name)}</td><td>${r.date}</td><td class="${r.isL?'lc':''}">${esc(r.det)}</td><td class="r">${r.mins}</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tbl-count').textContent=`${rows.length} rows`;
+  document.getElementById('tbl-showing').textContent=`Showing ${rows.length} of ${rows.length} rows`;
+  document.getElementById('tbl-tot').textContent=`Total: ${totMins} mins · ${(totMins/60).toFixed(1)}h`;
+
+  const wb=document.getElementById('warn-notes');
+  if(warns.length){wb.innerHTML='Notes:<br>'+warns.map(w=>`· ${esc(w)}`).join('<br>');wb.style.display='block';}
+  else wb.style.display='none';
+
+  document.getElementById('out').style.display='block';
+  document.getElementById('out').scrollIntoView({behavior:'smooth'});
+  document.getElementById('s5').className='step done';
+}
+
+/* ── Filter table ── */
+function filterTbl(q){
+  const rows=document.getElementById('prev-body').querySelectorAll('tr');
+  let shown=0;
+  rows.forEach(tr=>{const m=!q||tr.dataset.s.includes(q.toLowerCase());tr.style.display=m?'':'none';if(m)shown++;});
+  document.getElementById('tbl-showing').textContent=`Showing ${shown} of ${rows.length} rows`;
+}
+
+/* ── Download real .xlsx via SheetJS ── */
+function downloadXLSX(){
+  if(!genRows.length)return;
+  const m=genMeta;
+  const mName=MONTHS[m.month];
+  const fname=m.name.split(' ')[0]+'_Timesheet_'+mName+'_'+m.year+'.xlsx';
+
+  const headers=["LOB Vertical","Project Team","Effort Type","Associate Name","Date",
+    "Effort Details","Time Spent(In Mins)","Ticket Type","Ticket Number","SLA Met","Job Accuracy","Comments"];
+
+  const wsData=[headers,...genRows.map(r=>[r.lob,r.projTeam,r.et,r.name,r.date,r.det,r.mins,'N/A','N/A','N/A','N/A','N/A'])];
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  /* Column widths */
+  ws['!cols']=[{wch:14},{wch:26},{wch:30},{wch:20},{wch:12},{wch:26},{wch:20},{wch:14},{wch:16},{wch:10},{wch:14},{wch:14}];
+
+  /* Freeze header row - correct xlsx-js-style approach */
+  ws['!freeze'] = {xSplit:0, ySplit:1, state:'frozen'};
+
+  /* Style header row - SheetJS CE supports cell styles via write options workaround */
+  const range=XLSX.utils.decode_range(ws['!ref']);
+
+  /* Apply header fill/font using cell-level style (SheetJS Pro feature, but we set for compatibility) */
+  for(let C=range.s.c;C<=range.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:0,c:C});
+    if(!ws[addr])continue;
+    ws[addr].s={
+      fill:{patternType:'solid',fgColor:{rgb:'4EA72E'}},
+      font:{bold:true,sz:11,color:{rgb:'000000'},name:'Calibri'},
+      alignment:{horizontal:'center',vertical:'center',wrapText:true},
+      border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
+    };
+  }
+
+  /* Style data rows - no background colour, plain */
+  for(let R=1;R<=range.e.r;R++){
+    for(let C=range.s.c;C<=range.e.c;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      ws[addr].s={
+        font:{sz:10,name:'Calibri',color:{rgb:'000000'}},
+        alignment:{horizontal:C===6?'right':'left',vertical:'center'},
+      };
+    }
+  }
+
+  /* Auto-filter */
+  ws['!autofilter']={ref:`A1:L1`};
+
+  XLSX.utils.book_append_sheet(wb,ws,'Timetracker');
+  XLSX.writeFile(wb,fname,{bookType:'xlsx',type:'binary',cellStyles:true});
+
+  const btn=document.getElementById('dl-btn');
+  btn.textContent='Downloaded!';
+  setTimeout(()=>{btn.textContent='Download .xlsx';},2500);
+}
+
+/* ── Copy Markdown ── */
+function copyMD(){
+  const m=genMeta;if(!m.name)return;
+  const totMins=genRows.reduce((s,r)=>s+r.mins,0);
+  const mName=MONTHS[m.month];
+  const byType={};
+  genRows.forEach(r=>{if(!byType[r.et])byType[r.et]=0;byType[r.et]+=r.mins;});
+  const typeRows=Object.entries(byType).sort((a,b)=>b[1]-a[1])
+    .map(([et,mins])=>`| ${et} | ${mins} | ${(mins/60).toFixed(1)} | ${(mins/totMins*100).toFixed(1)}% |`).join('\n');
+  const md=`## Timesheet Summary - ${mName} ${m.year}\n\n**Employee:** ${m.name} | **LOB:** ${m.lob} | **Team:** ${m.team} | **Release:** ${m.release}\n\n### Time Overview\n| Metric | Value |\n|---|---|\n| Business Days | ${m.bizDays} |\n| Total Rows | ${genRows.length} |\n| Total Minutes | ${totMins} |\n| Total Hours | ${(totMins/60).toFixed(1)} |\n\n###  Work vs Leave\n| Category | Days | Hours |\n|---|---|---|\n| Working Days | ${m.bizDays-m.leaveCnt} | ${((totMins-m.leaveCnt*480)/60).toFixed(1)} |\n| Leave Days | ${m.leaveCnt} | ${m.leaveCnt*8} |\n\n### Hours by Effort Type\n| Effort Type | Minutes | Hours | % |\n|---|---|---|---|\n${typeRows}\n\n### Summary\n${m.name} (${m.team}) logged ${(totMins/60).toFixed(1)} hours for ${mName} ${m.year} across ${m.bizDays} business days. ${m.release} was the primary activity. ${m.leaveCnt} leave day(s) recorded.`;
+  const btn=document.querySelector('.dl-btn.sec');
+  /* Try modern clipboard API first, fall back to execCommand for file:// */
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(md).then(()=>{
+      btn.textContent='Copied!';
+      setTimeout(()=>{btn.textContent='Copy Summary';},2000);
+    }).catch(()=>fallbackCopy(md,btn));
+  } else {
+    fallbackCopy(md,btn);
+  }
+}
+
+function fallbackCopy(text,btn){
+  const ta=document.createElement('textarea');
+  ta.value=text;
+  ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();ta.select();
+  try{
+    document.execCommand('copy');
+    btn.textContent='Copied!';
+    setTimeout(()=>{btn.textContent='Copy Summary';},2000);
+  }catch(e){
+    btn.textContent='Failed - try Ctrl+C';
+    setTimeout(()=>{btn.textContent='Copy Summary';},3000);
+  }
+  document.body.removeChild(ta);
+}
+
+/* ── Guide Modal ── */
+function openGuide(){document.getElementById('guide-modal').classList.add('open');}
+function closeGuide(){document.getElementById('guide-modal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGuide();});
+</script>
+
+<!-- Pattern Warning Modal -->
+<div class="modal-overlay" id="pat-warn-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-hdr">
+      <h2><span>⚠</span> Patterns Under 480m</h2>
+      <button class="modal-close" onclick="closePatWarnModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="pat-warn-body" style="font-family:'DM Mono',monospace;font-size:.82rem;line-height:1.7;color:var(--txt2);margin-bottom:20px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn-add" style="background:none;border:1px solid var(--bdr);color:var(--mut);" onclick="closePatWarnModal()">← Go Back &amp; Fix</button>
+        <button class="btn-add" id="pat-warn-proceed" onclick="proceedGenerate()">Continue Anyway →</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
